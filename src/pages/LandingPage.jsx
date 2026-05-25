@@ -185,15 +185,23 @@ export default function LandingPage() {
 
 </div>
 
-          <div className="flex items-center gap-4">
-            <button className="text-sm font-medium text-zinc-400 hover:text-white transition-colors hidden sm:block">Sign In</button>
-            <button 
-              onClick={() => navigate('/browse')} // ⚡ Renders browsing portal on click
-              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all transform hover:scale-[1.02]"
-            >
-              Launch App
-            </button>
-          </div>
+         <div className="flex items-center gap-4">
+
+  <button
+    onClick={() => navigate('/dashboard')}
+    className="text-sm font-medium text-zinc-400 hover:text-white transition-colors hidden sm:block"
+  >
+    Sign In
+  </button>
+
+  <button
+    onClick={() => navigate('/browse')}
+    className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all transform hover:scale-[1.02]"
+  >
+    Launch App
+  </button>
+
+</div>
         </div>
       </motion.nav>
 
@@ -478,10 +486,41 @@ export default function LandingPage() {
           </div>
           
           <div className="flex gap-8">
-            <a href="#features" className="hover:text-zinc-300 transition-colors">Privacy Charter</a>
-            <a href="#trending" className="hover:text-zinc-300 transition-colors">Terms of Service</a>
-            <a href="#trust" className="hover:text-zinc-300 transition-colors">System Infrastructure</a>
-          </div>
+
+  <button
+    onClick={() =>
+      document.getElementById('features')?.scrollIntoView({
+        behavior: 'smooth',
+      })
+    }
+    className="hover:text-zinc-300 transition-colors"
+  >
+    Privacy Charter
+  </button>
+
+  <button
+    onClick={() =>
+      document.getElementById('trending')?.scrollIntoView({
+        behavior: 'smooth',
+      })
+    }
+    className="hover:text-zinc-300 transition-colors"
+  >
+    Terms of Service
+  </button>
+
+  <button
+    onClick={() =>
+      document.getElementById('trust')?.scrollIntoView({
+        behavior: 'smooth',
+      })
+    }
+    className="hover:text-zinc-300 transition-colors"
+  >
+    System Infrastructure
+  </button>
+
+</div>
 
           <div className="flex gap-4 text-zinc-400">
             {/* ⚡ BULLETPROOF TWITTER / X INLINE SVG */}
