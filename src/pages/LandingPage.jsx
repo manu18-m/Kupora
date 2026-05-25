@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom'; // ⚡ Added routing hook
+import { Link, useNavigate } from 'react-router-dom'; // ⚡ Added routing hook
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, ShieldCheck, ChevronRight, Copy, Check, 
   ArrowRight, Cpu, Zap, Activity, Users, Globe, 
   ArrowLeft, Star, Plus, Minus,
 } from 'lucide-react';
+
 
 // --- MOCK DATA CONTEXTS ---
 const BRAND_LOGOS = [
@@ -33,38 +34,67 @@ const FAQS = [
 // --- BRAND MINI COMPONENT ---
 const BrandCard = ({ coupon }) => {
   const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
+  const navigate = useNavigate();
+
+  const handleCopy = (e) => {
+    e.stopPropagation();
+
     navigator.clipboard.writeText(coupon.code);
     setCopied(true);
+
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="glass-card glass-card-hover rounded-2xl p-6 min-w-[320px] w-[320px] shrink-0 flex flex-col justify-between relative overflow-hidden group">
+    <div
+      onClick={() => navigate(`/coupon/${coupon.id}`)}
+      className="glass-card glass-card-hover rounded-2xl p-6 min-w-[320px] w-[320px] shrink-0 flex flex-col justify-between relative overflow-hidden group cursor-pointer"
+    >
       <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-purple-500/10 to-transparent blur-xl pointer-events-none" />
+
       <div>
         <div className="flex justify-between items-start mb-4">
           <span className="text-xs font-mono tracking-wider text-purple-400 bg-purple-950/40 border border-purple-800/30 px-2.5 py-1 rounded-md">
             {coupon.category}
           </span>
+
           <div className="flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2 py-0.5 rounded-full">
-            <Sparkles className="w-3 h-3" /> {coupon.match}% Accuracy
+            <Sparkles className="w-3 h-3" />
+            {coupon.match}% Accuracy
           </div>
         </div>
-        <h3 className="text-white text-xl font-bold mb-1">{coupon.brand}</h3>
-        <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 mb-2">{coupon.value}</p>
-        <p className="text-sm text-zinc-400 line-clamp-2 mb-6">{coupon.desc}</p>
+
+        <h3 className="text-white text-xl font-bold mb-1">
+          {coupon.brand}
+        </h3>
+
+        <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 mb-2">
+          {coupon.value}
+        </p>
+
+        <p className="text-sm text-zinc-400 line-clamp-2 mb-6">
+          {coupon.desc}
+        </p>
       </div>
 
       <div className="flex items-center gap-2 mt-auto">
         <div className="flex-1 font-mono text-xs font-semibold bg-black/40 text-purple-300 border border-purple-900/40 p-2.5 rounded-xl text-center">
-          {coupon.code}
+          {coupon.code.slice(0, 2)}****{coupon.code.slice(-2)}
         </div>
-        <button 
+
+        <button
           onClick={handleCopy}
-          className={`p-2.5 rounded-xl border transition-all ${copied ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'glass-card text-zinc-400 hover:text-white border-white/10'}`}
+          className={`p-2.5 rounded-xl border transition-all ${
+            copied
+              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+              : 'glass-card text-zinc-400 hover:text-white border-white/10'
+          }`}
         >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? (
+            <Check className="w-4 h-4" />
+          ) : (
+            <Copy className="w-4 h-4" />
+          )}
         </button>
       </div>
     </div>
@@ -108,11 +138,52 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#trending" className="hover:text-white transition-colors">Trending</a>
-            <a href="#trust" className="hover:text-white transition-colors">Enterprise Trust</a>
-            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
-          </div>
+
+  <button
+    onClick={() =>
+      document.getElementById('features')?.scrollIntoView({
+        behavior: 'smooth',
+      })
+    }
+    className="hover:text-white transition-colors"
+  >
+    Features
+  </button>
+
+  <button
+    onClick={() =>
+      document.getElementById('trending')?.scrollIntoView({
+        behavior: 'smooth',
+      })
+    }
+    className="hover:text-white transition-colors"
+  >
+    Trending
+  </button>
+
+  <button
+    onClick={() =>
+      document.getElementById('trust')?.scrollIntoView({
+        behavior: 'smooth',
+      })
+    }
+    className="hover:text-white transition-colors"
+  >
+    Enterprise Trust
+  </button>
+
+  <button
+    onClick={() =>
+      document.getElementById('faq')?.scrollIntoView({
+        behavior: 'smooth',
+      })
+    }
+    className="hover:text-white transition-colors"
+  >
+    FAQ
+  </button>
+
+</div>
 
           <div className="flex items-center gap-4">
             <button className="text-sm font-medium text-zinc-400 hover:text-white transition-colors hidden sm:block">Sign In</button>
