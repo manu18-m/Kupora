@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc } from 'firebase/firestore'; // ⚡ Added Firestore methods
-import { db, auth } from '../firebase'; // ⚡ Imported db and auth engines
+import { collection, addDoc } from 'firebase/firestore'; 
+import { db, auth } from '../firebase'; 
 
 // --- ATOMIC INLINE SVGS FOR CRASH PROTECTION ---
 const UploadIcon = () => <svg className="w-8 h-8 text-zinc-500 group-hover:text-purple-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
@@ -104,6 +104,7 @@ export default function UploadCouponPage() {
         price: price.trim(),
         terms: terms.trim() || 'Standard enterprise allocation rules apply.',
         sellerId: currentUser.uid,
+        status: "pending", // ⚡ Moderate flag parameter injection loop
         createdAt: new Date().toISOString()
       });
 
@@ -390,5 +391,4 @@ export default function UploadCouponPage() {
   );
 }
 
-// Extra static helpers
 const InfoIcon = () => <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;

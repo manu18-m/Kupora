@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore'; 
 import { db, auth } from '../firebase'; 
 import { 
   LayoutDashboard, Wallet, ShieldCheck, Bell, BarChart3, 
@@ -9,13 +9,7 @@ import {
   Sparkles, LogOut, Settings, AlertCircle
 } from 'lucide-react';
 
-// --- MOCK DATA FOR THE TRACKERS (MAINTAINED SATELLITES) ---
-const RECENT_PURCHASES = [
-  { id: '1', brand: 'Supabase Pro', date: '2 hours ago', savings: '$25.00', status: 'Success', code: 'SUPA25NOW' },
-  { id: '2', brand: 'TailwindUI', date: '1 day ago', savings: '$70.00', status: 'Success', code: 'TWUI70VIP' },
-  { id: '3', brand: 'Render Host', date: '3 days ago', savings: '$15.00', status: 'Success', code: 'RNDR15OFF' },
-];
-
+// --- MOCK DATA FOR THE TRACKERS (MAINTAINED AUXILIARY SATELLITES) ---
 const TRENDING_COUPONS = [
   { id: '1', brand: 'Cursor Pro', discount: '1 Month Free', confidence: '99%', category: 'AI Tools' },
   { id: '2', brand: 'Linear App', discount: '20% Off Base', confidence: '94%', category: 'DevOps' },
@@ -105,15 +99,15 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // --- FIRESTORE PERSISTENT METRIC HOOKS ---
+  // --- SELLER COUPONS MANAGEMENT STATES ---
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
-  const [metrics, setMetrics] = useState({
-    total: 0,
-    active: 0,
-    expired: 0
-  });
+  const [metrics, setMetrics] = useState({ total: 0, active: 0, expired: 0 });
+
+  // --- BUYER PURCHASE HISTORY STATES ---
+  const [purchases, setPurchases] = useState([]);
+  const [purchasesLoading, setPurchasesLoading] = useState(true);
 
   // --- INLINE EDIT FORM LOCAL CACHE STATES ---
   const [editingId, setEditingId] = useState(null);
@@ -155,17 +149,20 @@ export default function Dashboard() {
     return { total: totalCount, active: activeCount, expired: expiredCount };
   };
 
+  // --- COMPOSITE DATA LOADING EFFECT ---
   useEffect(() => {
-    const fetchSellerMetricsPipeline = async () => {
+    const fetchEcosystemData = async () => {
       const currentUser = auth.currentUser;
       if (!currentUser) {
         setLoading(false);
+        setPurchasesLoading(false);
         return;
       }
 
+      // 1. PIPELINE: FETCH SELLER REVENUE ASSIGNED MODULES
       try {
-        const q = query(collection(db, 'coupons'), where('sellerId', '==', currentUser.uid));
-        const querySnapshot = await getDocs(q);
+        const couponsQuery = query(collection(db, 'coupons'), where('sellerId', '==', currentUser.uid));
+        const couponsSnapshot = await getDocs(couponsQuery);
         
         let totalCount = 0;
         let activeCount = 0;
@@ -173,7 +170,7 @@ export default function Dashboard() {
         const rawCoupons = [];
         const currentDate = new Date();
 
-        querySnapshot.forEach((doc) => {
+        couponsSnapshot.forEach((doc) => {
           const data = doc.data();
           totalCount++;
 
@@ -185,11 +182,8 @@ export default function Dashboard() {
             }
           }
 
-          if (isExpired) {
-            expiredCount++;
-          } else {
-            activeCount++;
-          }
+          if (isExpired) expiredCount++;
+          else activeCount++;
 
           rawCoupons.push({
             id: doc.id,
@@ -203,22 +197,71 @@ export default function Dashboard() {
         });
 
         rawCoupons.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
         setCoupons(rawCoupons);
-        setMetrics({
-          total: totalCount,
-          active: activeCount,
-          expired: expiredCount
-        });
-
+        setMetrics({ total: totalCount, active: activeCount, expired: expiredCount });
       } catch (err) {
-        console.error("Administrative execution metrics collection error: ", err);
+        console.error("Seller metrics compilation asset load error: ", err);
       } finally {
         setLoading(false);
       }
+
+      // 2. PIPELINE: FETCH BUYER HISTORICAL TRANSACTION RECORDS
+      try {
+        const purchasesQuery = query(collection(db, 'purchases'), where('buyerId', '==', currentUser.uid));
+        const purchaseSnap = await getDocs(purchasesQuery);
+        
+        const structuredPurchases = await Promise.all(
+          purchaseSnap.docs.map(async (purchaseDoc) => {
+            const purchaseData = purchaseDoc.data();
+            let brandName = 'Unknown Target';
+            let discountValue = 'Promo Block Unlocked';
+            let couponCodeString = 'UNASSIGNED';
+
+            if (purchaseData.couponId) {
+              try {
+                const couponDocSnap = await getDoc(doc(db, 'coupons', purchaseData.couponId));
+                if (couponDocSnap.exists()) {
+                  const couponData = couponDocSnap.data();
+                  brandName = couponData.brand || brandName;
+                  discountValue = couponData.discount || discountValue;
+                  couponCodeString = couponData.code || couponCodeString;
+                }
+              } catch (docErr) {
+                console.error("Relational schema cross-join trace loop error: ", docErr);
+              }
+            }
+
+            let relativeTimeString = 'Recent Cycle';
+            if (purchaseData.purchasedAt) {
+              const diffMs = new Date() - new Date(purchaseData.purchasedAt);
+              const diffMins = Math.floor(diffMs / 60000);
+              const diffHours = Math.floor(diffMins / 60);
+              if (diffMins < 60) relativeTimeString = `${diffMins}m ago`;
+              else if (diffHours < 24) relativeTimeString = `${diffHours} hours ago`;
+              else relativeTimeString = new Date(purchaseData.purchasedAt).toLocaleDateString();
+            }
+
+            return {
+              id: purchaseDoc.id,
+              couponId: purchaseData.couponId,
+              brand: brandName,
+              discount: discountValue,
+              code: couponCodeString,
+              date: relativeTimeString,
+              savings: purchaseData.amount || '$0.00 Base'
+            };
+          })
+        );
+
+        setPurchases(structuredPurchases);
+      } catch (err) {
+        console.error("Buyer transaction profile tracking load fault: ", err);
+      } finally {
+        setPurchasesLoading(false);
+      }
     };
 
-    fetchSellerMetricsPipeline();
+    fetchEcosystemData();
   }, []);
 
   // --- FIRESTORE DELETE ROUTINE ---
@@ -237,7 +280,6 @@ export default function Dashboard() {
         setMetrics(computeMetricsFromList(remaining));
         return remaining;
       });
-
     } catch (err) {
       console.error("Ledger correction failure trace: ", err);
       alert("Error processing deletion node allocation.");
@@ -271,7 +313,6 @@ export default function Dashboard() {
       });
 
       setEditingId(null);
-
     } catch (err) {
       console.error("Ledger modification transmission failure trace: ", err);
       alert("Error pushing compilation updates to remote collection node.");
@@ -416,26 +457,46 @@ export default function Dashboard() {
                 <h4 className="text-sm font-semibold text-white">Recent Purchase Pipeline</h4>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-zinc-400">
-                  <thead className="bg-white/[0.02] text-zinc-500 font-mono uppercase tracking-wider text-[10px]">
-                    <tr>
-                      <th className="p-4">Target Brand</th>
-                      <th className="p-4">Timestamp</th>
-                      <th className="p-4">Retained Yield</th>
-                      <th className="p-4">Runtime Token</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {RECENT_PURCHASES.map((p) => (
-                      <tr key={p.id} className="hover:bg-white/[0.01] transition-colors">
-                        <td className="p-4 font-medium text-white">{p.brand}</td>
-                        <td className="p-4 text-zinc-500">{p.date}</td>
-                        <td className="p-4 text-emerald-400 font-medium">{p.savings}</td>
-                        <td className="p-4"><CodeChip code={p.code} /></td>
+                {purchasesLoading ? (
+                  <div className="p-6 font-mono text-xs text-zinc-500 animate-pulse">
+                    Synchronizing transaction pipeline logs...
+                  </div>
+                ) : purchases.length === 0 ? (
+                  <div className="p-8 text-center text-zinc-500 font-mono text-xs flex flex-col items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-purple-400" />
+                    <span>No active contract allocations unlocked inside your client history profile.</span>
+                  </div>
+                ) : (
+                  <table className="w-full text-left text-xs text-zinc-400">
+                    <thead className="bg-white/[0.02] text-zinc-500 font-mono uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="p-4">Target Brand</th>
+                        <th className="p-4">Timestamp</th>
+                        <th className="p-4">Retained Yield</th>
+                        <th className="p-4">Runtime Token</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {purchases.map((p) => (
+                        <tr 
+                          key={p.id} 
+                          onClick={() => p.couponId && navigate(`/coupon/${p.couponId}`)}
+                          className="hover:bg-white/[0.01] transition-colors cursor-pointer"
+                        >
+                          <td className="p-4">
+                            <span className="font-medium text-white block">{p.brand}</span>
+                            <span className="text-[10px] text-purple-400 font-mono">{p.discount}</span>
+                          </td>
+                          <td className="p-4 text-zinc-500">{p.date}</td>
+                          <td className="p-4 text-emerald-400 font-medium">{p.savings}</td>
+                          <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                            <CodeChip code={p.code} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
 
@@ -515,7 +576,7 @@ export default function Dashboard() {
                                 <div className="space-y-1">
                                   <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-wide">Brand Name</label>
                                   <input type="text" required value={editBrand} onChange={(e) => setEditBrand(e.target.value)} className="w-full bg-black/40 border border-white/10 focus:border-purple-500/60 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none transition-all" />
-                                </div>
+                               </div>
                                 <div className="space-y-1">
                                   <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-wide">Discount Value</label>
                                   <input type="text" required value={editDiscount} onChange={(e) => setEditDiscount(e.target.value)} className="w-full bg-black/40 border border-white/10 focus:border-purple-500/60 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none transition-all" />

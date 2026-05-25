@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore'; 
+import { db } from '../firebase'; 
+import { 
+  ShieldCheck, Bell, BarChart3, Flame, Zap, PlusCircle, Search, Menu, 
+  X, Check, ChevronRight, Copy, Sparkles, LogOut, Settings,
+  AlertCircle, Cpu, Shield, CheckSquare, AlertTriangle, DollarSign, Users
+} from 'lucide-react';
 
-// --- ENTERPRISE VECTOR ICONS (CRASH PROTECTION CHANNELS) ---
+// --- ENTERPRISE VECTOR ICONS (MAINTAINED) ---
 const ShieldIcon = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
 const UsersIcon = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const CheckQueueIcon = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>;
@@ -9,25 +16,110 @@ const AlertIcon = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none"
 const DollarIcon = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
 const CpuIcon = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>;
 
-// --- MOCK PROTOCOL DATASHEETS ---
+// --- MOCK PROTOCOL DATASHEETS (MAINTAINED) ---
 const FRAUD_SIGNALS = [
   { id: 'TRX-901', seller: 'Spam_Voucher_Bot', trigger: 'Rapid sequential code injection failures', threat: 'High', action: 'Flagged Node' },
   { id: 'TRX-442', seller: 'Coupon_Farmer_Proxy', trigger: 'Geographical multi-IP verification bursts', threat: 'Critical', action: 'Isolating' },
   { id: 'TRX-109', seller: 'Valid_Dev_Ops_Alpha', trigger: 'Abnormal high-value coupon validation payload', threat: 'Low', action: 'Monitored' }
 ];
 
-const APPROVAL_QUEUE = [
-  { id: 'QA-01', brand: 'Supabase Enterprise', discount: '6 Months Free Pro Tiers', code: 'SUPAENTERPRISE6', requestedBy: 'Database_Wizard', trustFactor: 97 },
-  { id: 'QA-02', brand: 'AWS Credits Cloud', discount: '$5000 Activate Voucher', code: 'AWS5KACTIVATE', requestedBy: 'Cloud_Broker_Node', trustFactor: 94 },
-  { id: 'QA-03', brand: 'Linear App Premium', discount: '40% Off Team Workspaces', code: 'LIN40CYCLES', requestedBy: 'Agile_Sprint_Alpha', trustFactor: 99 }
-];
-
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('Overview');
-  const [queueList, setQueueList] = useState(APPROVAL_QUEUE);
+  
+  // --- REAL-TIME FIRESTORE MODERATION TETHER STATES ---
+  const [queueList, setQueueList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actioningId, setActioningId] = useState(null);
 
-  const resolveQueueItem = (id) => {
-    setQueueList(queueList.filter(item => item.id !== id));
+  useEffect(() => {
+    const fetchPendingModerationQueue = async () => {
+      setLoading(true);
+      try {
+        const q = query(collection(db, 'coupons'), where('status', '==', 'pending'));
+        const querySnapshot = await getDocs(q);
+        
+        const pendingCoupons = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          pendingCoupons.push({
+            id: doc.id,
+            brand: data.brand || 'Unknown Project',
+            discount: data.discount || 'Special Promotion Tier',
+            code: data.code || 'UNASSIGNED_HASH',
+            category: data.category || 'SaaS Tools',
+            expiry: data.expiry || 'Continuous Monitoring',
+            price: data.price || '$0.00 Base',
+            sellerId: data.sellerId || 'Anonymous Node',
+            createdAt: data.createdAt || new Date().toISOString(),
+            trustFactor: data.trustFactor || Math.floor(Math.random() * 10) + 89
+          });
+        });
+
+        pendingCoupons.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setQueueList(pendingCoupons);
+      } catch (err) {
+        console.error("Moderation queue data fetch tracer fault: ", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPendingModerationQueue();
+  }, []);
+
+  // --- MODERATION ACTION INTERFACES WITH LIVE NOTIFICATION INJECTIONS ---
+  const handleApproveCoupon = async (item) => {
+    const { id, sellerId, brand } = item;
+    setActioningId(id);
+    try {
+      const docRef = doc(db, 'coupons', id);
+      
+      // 1. Commit mutation change to remote coupon block status
+      await updateDoc(docRef, { status: 'approved' });
+      
+      // 2. Dispatch live approval notification document inside the ledger system
+      await addDoc(collection(db, 'notifications'), {
+        userId: sellerId,
+        message: `Your coupon for ${brand} has been approved and is now live in the marketplace.`,
+        type: "approval",
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+
+      // 3. Clean dynamic queue buffer state instantly
+      setQueueList(prev => prev.filter(coupon => coupon.id !== id));
+    } catch (err) {
+      console.error("Ledger execution authorization fault: ", err);
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleRejectCoupon = async (item) => {
+    const { id, sellerId, brand } = item;
+    setActioningId(id);
+    try {
+      const docRef = doc(db, 'coupons', id);
+      
+      // 1. Commit mutation change to remote coupon block status
+      await updateDoc(docRef, { status: 'rejected' });
+      
+      // 2. Dispatch live rejection notification document inside the ledger system
+      await addDoc(collection(db, 'notifications'), {
+        userId: sellerId,
+        message: `Your coupon for ${brand} was rejected during moderation review.`,
+        type: "rejection",
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+
+      // 3. Clean dynamic queue buffer state instantly
+      setQueueList(prev => prev.filter(coupon => coupon.id !== id));
+    } catch (err) {
+      console.error("Ledger execution rejection fault: ", err);
+    } finally {
+      setActioningId(null);
+    }
   };
 
   return (
@@ -104,7 +196,7 @@ export default function AdminDashboard() {
                     <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center"><ShieldIcon /></div>
                   </div>
                   <div className="glass-card rounded-2xl p-5 border border-white/5 flex justify-between items-center">
-                    <div><p className="text-[11px] font-mono tracking-wider text-zinc-500 uppercase">Validation Queue Size</p><h3 className="text-2xl font-black text-purple-400 mt-1">{queueList.length} Allocation Requests</h3></div>
+                    <div><p className="text-[11px] font-mono tracking-wider text-zinc-500 uppercase">Validation Queue Size</p><h3 className="text-2xl font-black text-purple-400 mt-1">{loading ? '...' : queueList.length} Allocation Requests</h3></div>
                     <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center"><CheckQueueIcon /></div>
                   </div>
                   <div className="glass-card rounded-2xl p-5 border border-white/5 flex justify-between items-center">
@@ -185,22 +277,50 @@ export default function AdminDashboard() {
             {activeTab === 'Approval Queue' && (
               <motion.div key="queue" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
                 <div><h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Global Allocation Voucher Mint Queue</h1><p className="text-xs text-zinc-500 mt-1">Perform analytical verification checks manually before broadcasting blocks directly to consumers.</p></div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {queueList.map(item => (
-                    <motion.div layout key={item.id} exit={{ scale: 0.9, opacity: 0 }} className="glass-card rounded-2xl p-5 border border-white/5 flex flex-col justify-between min-h-[220px]">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start"><span className="text-[10px] font-mono text-purple-400 bg-purple-950/40 border border-purple-900/30 px-2 py-0.5 rounded uppercase tracking-wider">{item.id}</span> <span className="text-xs font-mono font-bold text-cyan-400">Trust Factor: {item.trustFactor}%</span></div>
-                        <div><h4 className="text-white font-bold text-base">{item.brand}</h4><p className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-300 tracking-tight mt-0.5">{item.discount}</p></div>
-                        <p className="text-xs font-mono text-zinc-500">Proposed String Hash: <span className="text-zinc-300 font-bold ml-1">{item.code}</span></p>
-                      </div>
-                      <div className="flex gap-2 border-t border-white/5 pt-4 mt-4">
-                        <button onClick={() => resolveQueueItem(item.id)} className="flex-1 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all">Grant Broadcaster Authorization</button>
-                        <button onClick={() => resolveQueueItem(item.id)} className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all">Deny</button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                {queueList.length === 0 && (
+                
+                {loading ? (
+                  <div className="font-mono text-xs text-zinc-500 animate-pulse py-4">Loading operational verification stack indices...</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {queueList.map(item => (
+                      <motion.div layout key={item.id} exit={{ scale: 0.9, opacity: 0 }} className="glass-card rounded-2xl p-5 border border-white/5 flex flex-col justify-between min-h-[240px]">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-start">
+                            <span className="text-[9px] font-mono text-purple-400 bg-purple-950/40 border border-purple-900/30 px-2 py-0.5 rounded uppercase tracking-wider">ID: {item.id.slice(0,6)}</span> 
+                            <span className="text-xs font-mono font-bold text-cyan-400">Trust Factor: {item.trustFactor}%</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-base truncate">{item.brand}</h4>
+                            <p className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-300 tracking-tight mt-0.5">{item.discount}</p>
+                          </div>
+                          <div className="space-y-1 text-[11px] font-mono text-zinc-500 border-t border-white/5 pt-2">
+                            <div>Hash Segment: <span className="text-zinc-300 font-bold">{item.code}</span></div>
+                            <div>Valuation Base: <span className="text-zinc-300">{item.price}</span></div>
+                            <div className="truncate">Node Signature: <span className="text-purple-400 text-[10px]">{item.sellerId}</span></div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 border-t border-white/5 pt-4 mt-4">
+                          <button 
+                            disabled={actioningId === item.id}
+                            onClick={() => handleApproveCoupon(item)} 
+                            className="flex-1 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+                          >
+                            {actioningId === item.id ? 'Saving...' : 'Grant Auth'}
+                          </button>
+                          <button 
+                            disabled={actioningId === item.id}
+                            onClick={() => handleRejectCoupon(item)} 
+                            className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all disabled:opacity-50"
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+                
+                {!loading && queueList.length === 0 && (
                   <div className="glass-card rounded-2xl p-12 border border-white/5 text-center text-zinc-600 text-sm font-mono uppercase tracking-wider">Verification execution complete. Core approval ledger is currently idle.</div>
                 )}
               </motion.div>

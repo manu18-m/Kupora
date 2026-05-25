@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom'; 
-import { collection, getDocs } from 'firebase/firestore'; 
+import { collection, getDocs, query, where } from 'firebase/firestore'; // ⚡ Verified all query methods are imported
 import { db } from '../firebase'; 
 import { 
   Search, Filter, ChevronDown, CheckCircle, Clock, 
@@ -202,11 +202,17 @@ export default function MarketplacePage() {
   const [activeCategory, setActiveCategory] = useState('All Deals');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // --- REAL-TIME FIRESTORE DATA ACQUISITION LAYERS ---
+  // --- REAL-TIME FIRESTORE DATA ACQUISITION LAYERS (MODERATED) ---
   useEffect(() => {
-    const fetchCouponsFromFirestore = async () => {
+    const fetchApprovedCouponsFromFirestore = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'coupons'));
+        // ⚡ Isolated collection search using verified constraints logic
+        const approvedCouponsQuery = query(
+          collection(db, 'coupons'), 
+          where('status', '==', 'approved')
+        );
+        
+        const querySnapshot = await getDocs(approvedCouponsQuery);
         const dynamicCoupons = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -230,7 +236,7 @@ export default function MarketplacePage() {
       }
     };
 
-    fetchCouponsFromFirestore();
+    fetchApprovedCouponsFromFirestore();
   }, []);
 
   // --- DYNAMIC TIME-DELTA FILTERING ARRAYS ---
@@ -239,7 +245,6 @@ export default function MarketplacePage() {
                           coupon.discount.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === 'All Deals' || coupon.category === activeCategory;
     
-    // Safety check verification to filter out expired listings matching standard system date
     let isNotExpired = true;
     if (coupon.expiry && typeof coupon.expiry === 'string' && !coupon.expiry.includes('Continuous')) {
       const expirationDate = new Date(coupon.expiry);

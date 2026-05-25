@@ -5,9 +5,9 @@ import {
   ThumbsUp, MessageSquare, AlertTriangle, ExternalLink, 
   HelpCircle, Star, Share2, CornerDownRight, CreditCard, Lock
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom'; // ⚡ Added useParams
-import { doc, getDoc } from 'firebase/firestore'; // ⚡ Added Firestore methods
-import { db } from '../firebase'; // ⚡ Imported db instance
+import { useNavigate, useParams } from 'react-router-dom'; 
+import { doc, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore'; 
+import { db, auth } from '../firebase'; 
 
 // --- SUB-COMPONENT: TIMER PROPS ENGINE ---
 const CountdownEngine = ({ expiryDate }) => {
@@ -42,7 +42,7 @@ const CountdownEngine = ({ expiryDate }) => {
 
 export default function CouponDetailsPage() {
   const navigate = useNavigate();
-  const { id } = useParams(); // ⚡ Captured route dynamic token parameter
+  const { id } = useParams(); 
 
   // --- DATA LOADING & FIRESTORE STATES ---
   const [coupon, setCoupon] = useState(null);
@@ -76,11 +76,12 @@ export default function CouponDetailsPage() {
             category: data.category || 'SaaS Tools',
             expiry: data.expiry || 'Continuous Monitoring',
             price: data.price || '$0.00 Base',
+            sellerId: data.sellerId || null,
             terms: data.terms ? data.terms.split('\n') : [
               'Applies only to functional team and pro configurations.',
-              'Max utilization baseline capped at 12 rolling cycles per organization.'
+              'Max utilization baseline capped at 12 rolling cycles per organization.',
+              'Zero compatibility stacking on top of parallel seed venture discount vouchers.'
             ],
-            // Simulated baseline safety profiles for structural matching logic fallback 
             aiConfidence: data.aiConfidence || Math.floor(Math.random() * 5) + 95,
             successRate: data.successRate || Math.floor(Math.random() * 4) + 96,
             logo: data.logo || 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg',
@@ -116,12 +117,71 @@ export default function CouponDetailsPage() {
     }
   }, [id]);
 
-  const handlePurchaseSimulation = () => {
+  // --- ADDITIONAL PERSISTENT CHECK: DUPLICATE PURCHASES ---
+  useEffect(() => {
+    const checkExistingPurchaseNode = async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser || !coupon) return;
+
+      try {
+        const q = query(
+          collection(db, 'purchases'),
+          where('buyerId', '==', currentUser.uid),
+          where('couponId', '==', coupon.id)
+        );
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          setIsPurchased(true); 
+        }
+      } catch (err) {
+        console.error("Ledger validation fault traces: ", err);
+      }
+    };
+
+    checkExistingPurchaseNode();
+  }, [coupon]);
+
+  // --- REAL FIRESTORE PRODUCTION PURCHASE TRANSACTION ---
+  const handlePurchaseSimulation = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Authentication fault: Unassigned session key. Sign in to clear payment channels.");
+      return;
+    }
+
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      const duplicateCheckQuery = query(
+        collection(db, 'purchases'),
+        where('buyerId', '==', currentUser.uid),
+        where('couponId', '==', coupon.id)
+      );
+      const duplicateCheckSnap = await getDocs(duplicateCheckQuery);
+
+      if (!duplicateCheckSnap.empty) {
+        alert("Ecosystem validation error: Dynamic voucher contract asset already unlocked inside workspace.");
+        setIsPurchased(true);
+        setIsProcessing(false);
+        return;
+      }
+
+      await addDoc(collection(db, 'purchases'), {
+        buyerId: currentUser.uid,
+        couponId: coupon.id,
+        sellerId: coupon.sellerId || 'Node_Distributor_Alpha',
+        amount: coupon.price || '$0.00 Base',
+        purchasedAt: new Date().toISOString()
+      });
+
       setIsPurchased(true);
-    }, 1500);
+
+    } catch (err) {
+      console.error("Settlement engine processing execution failure: ", err);
+      alert(err.message.replace('Firebase: ', ''));
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const triggerCopy = () => {
@@ -408,7 +468,7 @@ export default function CouponDetailsPage() {
                     <h5 className="text-xs font-bold text-white group-hover:text-purple-400 transition-colors">{sim.brand}</h5>
                     <p className="text-sm font-black text-zinc-300 mt-0.5">{sim.value}</p>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-2 py-0.5 rounded-full">
                     {sim.rate}% Match
                   </span>
                 </div>
