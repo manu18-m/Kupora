@@ -1,21 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'; 
+import { db, auth } from '../firebase'; 
 import { 
-  LayoutDashboard, Wallet, History, ArrowUpRight, ShieldCheck, 
-  Bell, BarChart3, Flame, Zap, PlusCircle, Search, Menu, 
-  X, Check, ChevronRight, Copy, Sparkles, LogOut, Settings
+  LayoutDashboard, Wallet, ShieldCheck, Bell, BarChart3, 
+  Flame, Zap, PlusCircle, Search, Menu, X, Check, Copy, 
+  Sparkles, LogOut, Settings, AlertCircle
 } from 'lucide-react';
 
-// --- MOCK DATA ---
+// --- MOCK DATA FOR THE TRACKERS (MAINTAINED SATELLITES) ---
 const RECENT_PURCHASES = [
   { id: '1', brand: 'Supabase Pro', date: '2 hours ago', savings: '$25.00', status: 'Success', code: 'SUPA25NOW' },
   { id: '2', brand: 'TailwindUI', date: '1 day ago', savings: '$70.00', status: 'Success', code: 'TWUI70VIP' },
   { id: '3', brand: 'Render Host', date: '3 days ago', savings: '$15.00', status: 'Success', code: 'RNDR15OFF' },
-];
-
-const UPLOADED_COUPONS = [
-  { id: '1', brand: 'Vercel Enterprise', views: '1.2K', usage: '84%', yield: '$420.00' },
-  { id: '2', brand: 'Resend Email', views: '430', usage: '91%', yield: '$110.00' },
 ];
 
 const TRENDING_COUPONS = [
@@ -30,17 +28,17 @@ const ACTIVITY_FEED = [
 ];
 
 // --- SUB-COMPONENT: SIDEBAR NAV ---
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const Sidebar = ({ isOpen, toggleSidebar, onNavigate }) => {
   const links = [
-    { icon: LayoutDashboard, label: 'Overview', active: true },
-    { icon: BarChart3, label: 'Analytics' },
-    { icon: Wallet, label: 'Liquidity Vault' },
-    { icon: Flame, label: 'Marketplace' },
-    { icon: Settings, label: 'Node Settings' },
+    { icon: LayoutDashboard, label: 'Overview', path: '/dashboard', active: true },
+    { icon: BarChart3, label: 'Analytics', path: '/dashboard' },
+    { icon: Wallet, label: 'Liquidity Vault', path: '/dashboard' },
+    { icon: Flame, label: 'Marketplace', path: '/browse' },
+    { icon: Settings, label: 'Node Settings', path: '/dashboard' },
   ];
 
   return (
-    <aside className={`fixed top-0 left-0 bottom-0 z-50 w-64 bg-[#050215] border-r border-white/5 p-6 flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+    <aside className={`fixed top-0 left-0 bottom-0 z-50 w-64 bg-[#050215] border-r border-r-white/5 p-6 flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-base text-white">
@@ -58,6 +56,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           {links.map((link, idx) => (
             <button
               key={idx}
+              onClick={() => onNavigate(link.path)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${link.active ? 'bg-white/5 text-white border border-white/5 shadow-inner' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]'}`}
             >
               <link.icon className={`w-4 h-4 ${link.active ? 'text-purple-400' : 'text-zinc-400'}`} />
@@ -68,7 +67,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </div>
 
       <div className="pt-4 border-t border-white/5">
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-500 hover:text-red-400 transition-colors rounded-xl">
+        <button 
+          onClick={() => onNavigate('/')}
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-500 hover:text-red-400 transition-colors rounded-xl"
+        >
           <LogOut className="w-4 h-4" />
           Terminate Session
         </button>
@@ -88,6 +90,7 @@ const CodeChip = ({ code }) => {
 
   return (
     <button 
+      type="button"
       onClick={handleCopy}
       className={`font-mono text-xs px-2.5 py-1 rounded-md border flex items-center gap-1.5 transition-all ${copied ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'}`}
     >
@@ -99,7 +102,183 @@ const CodeChip = ({ code }) => {
 
 // --- MAIN UI CONTROLLER ---
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // --- FIRESTORE PERSISTENT METRIC HOOKS ---
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [metrics, setMetrics] = useState({
+    total: 0,
+    active: 0,
+    expired: 0
+  });
+
+  // --- INLINE EDIT FORM LOCAL CACHE STATES ---
+  const [editingId, setEditingId] = useState(null);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [editBrand, setEditBrand] = useState('');
+  const [editDiscount, setEditDiscount] = useState('');
+  const [editCode, setEditCode] = useState('');
+  const [editExpiry, setEditExpiry] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+
+  const initiateEditMode = (coupon) => {
+    setEditingId(coupon.id);
+    setEditBrand(coupon.brand);
+    setEditDiscount(coupon.discount);
+    setEditCode(coupon.code);
+    setEditExpiry(coupon.expiry === 'Continuous Monitoring' ? '' : coupon.expiry);
+    setEditPrice(coupon.price);
+  };
+
+  const computeMetricsFromList = (list) => {
+    const currentDate = new Date();
+    let totalCount = 0;
+    let activeCount = 0;
+    let expiredCount = 0;
+
+    list.forEach(c => {
+      totalCount++;
+      let isExpired = false;
+      if (c.expiry && typeof c.expiry === 'string' && !c.expiry.includes('Continuous')) {
+        const expDate = new Date(c.expiry);
+        if (!isNaN(expDate.getTime()) && expDate < currentDate) {
+          isExpired = true;
+        }
+      }
+      if (isExpired) expiredCount++;
+      else activeCount++;
+    });
+
+    return { total: totalCount, active: activeCount, expired: expiredCount };
+  };
+
+  useEffect(() => {
+    const fetchSellerMetricsPipeline = async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const q = query(collection(db, 'coupons'), where('sellerId', '==', currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        
+        let totalCount = 0;
+        let activeCount = 0;
+        let expiredCount = 0;
+        const rawCoupons = [];
+        const currentDate = new Date();
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          totalCount++;
+
+          let isExpired = false;
+          if (data.expiry && typeof data.expiry === 'string' && !data.expiry.includes('Continuous')) {
+            const expDate = new Date(data.expiry);
+            if (!isNaN(expDate.getTime()) && expDate < currentDate) {
+              isExpired = true;
+            }
+          }
+
+          if (isExpired) {
+            expiredCount++;
+          } else {
+            activeCount++;
+          }
+
+          rawCoupons.push({
+            id: doc.id,
+            brand: data.brand || 'Unknown Node',
+            discount: data.discount || 'Allocation Special',
+            expiry: data.expiry || 'Continuous Monitoring',
+            price: data.price || '$0.00 Base',
+            code: data.code || 'UNKNOWN_PARAM',
+            createdAt: data.createdAt || new Date().toISOString()
+          });
+        });
+
+        rawCoupons.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        setCoupons(rawCoupons);
+        setMetrics({
+          total: totalCount,
+          active: activeCount,
+          expired: expiredCount
+        });
+
+      } catch (err) {
+        console.error("Administrative execution metrics collection error: ", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSellerMetricsPipeline();
+  }, []);
+
+  // --- FIRESTORE DELETE ROUTINE ---
+  const handleDeleteCoupon = async (e, couponId) => {
+    e.stopPropagation(); 
+
+    const confirmWipe = window.confirm("Are you sure you want to terminate this contract allocation node?");
+    if (!confirmWipe) return;
+
+    setDeletingId(couponId);
+    try {
+      await deleteDoc(doc(db, 'coupons', couponId));
+
+      setCoupons(prevCoupons => {
+        const remaining = prevCoupons.filter(c => c.id !== couponId);
+        setMetrics(computeMetricsFromList(remaining));
+        return remaining;
+      });
+
+    } catch (err) {
+      console.error("Ledger correction failure trace: ", err);
+      alert("Error processing deletion node allocation.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // --- FIRESTORE UPDATE ROUTINE ---
+  const handleUpdateCoupon = async (e, couponId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setUpdateLoading(true);
+
+    try {
+      const docRef = doc(db, 'coupons', couponId);
+      const payload = {
+        brand: editBrand.trim(),
+        discount: editDiscount.trim(),
+        code: editCode.trim().toUpperCase(),
+        expiry: editExpiry || 'Continuous Monitoring',
+        price: editPrice.trim()
+      };
+
+      await updateDoc(docRef, payload);
+
+      setCoupons(prevCoupons => {
+        const mutatedList = prevCoupons.map(c => c.id === couponId ? { ...c, ...payload } : c);
+        setMetrics(computeMetricsFromList(mutatedList));
+        return mutatedList;
+      });
+
+      setEditingId(null);
+
+    } catch (err) {
+      console.error("Ledger modification transmission failure trace: ", err);
+      alert("Error pushing compilation updates to remote collection node.");
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#030014] text-zinc-200 antialiased font-sans">
@@ -108,7 +287,7 @@ export default function Dashboard() {
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* RENDER ACTIVE NAVIGATION */}
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(false)} onNavigate={(path) => navigate(path)} />
 
       {/* CORE FRAME LAYOUT CONTENT SLAG */}
       <div className="lg:pl-64 min-h-screen flex flex-col">
@@ -141,7 +320,9 @@ export default function Dashboard() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-500 to-indigo-600 p-[1px]">
                 <div className="w-full h-full bg-zinc-950 rounded-[7px] flex items-center justify-center text-xs font-bold text-white">OP</div>
               </div>
-              <span className="text-xs font-medium text-zinc-300 hidden md:block">operator_0x1</span>
+              <span className="text-xs font-medium text-zinc-300 hidden md:block">
+                {auth.currentUser ? auth.currentUser.email.split('@')[0] : 'operator_0x1'}
+              </span>
             </div>
           </div>
         </header>
@@ -155,44 +336,52 @@ export default function Dashboard() {
             {/* HERO INSIGHT METRIC BARS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               
-              {/* LIQUIDITY POSITION CARD */}
+              {/* TOTAL UPLOADED CONTRACT MATRIX CARD */}
               <motion.div whileHover={{ y: -2 }} className="glass-panel border border-white/5 p-6 rounded-2xl bg-white/[0.01] space-y-3 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 blur-xl pointer-events-none" />
                 <div className="flex justify-between items-center text-zinc-500">
-                  <span className="text-xs font-mono tracking-wider uppercase">Yield Wallet</span>
-                  <Wallet className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs font-mono tracking-wider uppercase">Total Deployed</span>
+                  <BarChart3 className="w-4 h-4 text-purple-400" />
                 </div>
                 <div className="space-y-0.5">
-                  <h3 className="text-2xl font-extrabold text-white tracking-tight">$1,240.45</h3>
-                  <p className="text-[11px] font-medium text-emerald-400 flex items-center gap-0.5">
-                    <ArrowUpRight className="w-3 h-3" /> +14.2% this micro-cycle
+                  <h3 className="text-2xl font-extrabold text-white tracking-tight">
+                    {loading ? '...' : metrics.total} <span className="text-xs text-zinc-500 font-normal">nodes</span>
+                  </h3>
+                  <p className="text-[11px] font-medium text-purple-400 flex items-center gap-0.5">
+                    Cumulative system architecture index
                   </p>
                 </div>
               </motion.div>
 
-              {/* SELLER TRUST METRIC */}
+              {/* ACTIVE ALLOCATIONS METRIC */}
               <motion.div whileHover={{ y: -2 }} className="glass-panel border border-white/5 p-6 rounded-2xl bg-white/[0.01] space-y-3 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/5 blur-xl pointer-events-none" />
                 <div className="flex justify-between items-center text-zinc-500">
-                  <span className="text-xs font-mono tracking-wider uppercase">Trust Index</span>
+                  <span className="text-xs font-mono tracking-wider uppercase">Active Allocations</span>
                   <ShieldCheck className="w-4 h-4 text-cyan-400" />
                 </div>
                 <div className="space-y-0.5">
-                  <h3 className="text-2xl font-extrabold text-white tracking-tight">99.4 <span className="text-xs text-zinc-500 font-normal">/ 100</span></h3>
-                  <p className="text-[11px] font-mono tracking-wider text-cyan-400 uppercase">Tier 1 Elite Publisher</p>
+                  <h3 className="text-2xl font-extrabold text-white tracking-tight">
+                    {loading ? '...' : metrics.active} <span className="text-xs text-zinc-500 font-normal">live</span>
+                  </h3>
+                  <p className="text-[11px] font-mono tracking-wider text-emerald-400 uppercase">
+                    Natively verification operational
+                  </p>
                 </div>
               </motion.div>
 
-              {/* REVENUE CHART METRIC */}
+              {/* EXPIRED CONTRACT TRACKER */}
               <motion.div whileHover={{ y: -2 }} className="glass-panel border border-white/5 p-6 rounded-2xl bg-white/[0.01] space-y-3 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 blur-xl pointer-events-none" />
+                <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/5 blur-xl pointer-events-none" />
                 <div className="flex justify-between items-center text-zinc-500">
-                  <span className="text-xs font-mono tracking-wider uppercase">Saved Pools</span>
-                  <BarChart3 className="w-4 h-4 text-indigo-400" />
+                  <span className="text-xs font-mono tracking-wider uppercase">Expired Links</span>
+                  <Wallet className="w-4 h-4 text-red-400" />
                 </div>
                 <div className="space-y-0.5">
-                  <h3 className="text-2xl font-extrabold text-white tracking-tight">$410.00</h3>
-                  <p className="text-[11px] text-zinc-500">Cumulative stack optimization</p>
+                  <h3 className="text-2xl font-extrabold text-white tracking-tight">
+                    {loading ? '...' : metrics.expired} <span className="text-xs text-zinc-500 font-normal">dead</span>
+                  </h3>
+                  <p className="text-[11px] text-zinc-500">Terminated contract conditions</p>
                 </div>
               </motion.div>
 
@@ -207,7 +396,6 @@ export default function Dashboard() {
                 </div>
                 <span className="text-xs font-mono bg-purple-950/40 text-purple-400 px-2 py-0.5 rounded border border-purple-900/30">Live telemetry</span>
               </div>
-              {/* CSS inline height simulation mockup bar line */}
               <div className="h-32 flex items-end gap-2 pt-4">
                 {[40, 25, 45, 30, 55, 70, 65, 80, 50, 95, 60, 85].map((val, idx) => (
                   <div key={idx} className="flex-1 bg-white/5 rounded-t-md relative group h-full flex items-end">
@@ -251,23 +439,130 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* UPLOADED CONTRACT MANAGEMENT PLATFORM BAR */}
+            {/* REAL-TIME DYNAMIC FIRESTORE OWNED TOKEN TRAY */}
             <div className="border border-white/5 rounded-2xl bg-white/[0.01] p-6 space-y-4">
               <h4 className="text-sm font-semibold text-white">Your Uploaded Yield Modules</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {UPLOADED_COUPONS.map((up) => (
-                  <div key={up.id} className="border border-white/5 rounded-xl p-4 bg-white/[0.01] flex justify-between items-center">
-                    <div>
-                      <h5 className="text-sm font-medium text-white">{up.brand}</h5>
-                      <p className="text-xs text-zinc-500 mt-1">Analytics: <span className="text-zinc-400">{up.views} clicks</span> • Usage: <span className="text-purple-400">{up.usage}</span></p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-mono text-zinc-500 uppercase">Gross Yield</p>
-                      <p className="text-sm font-bold text-white mt-0.5">{up.yield}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              
+              {loading ? (
+                <div className="space-y-2 font-mono text-xs text-zinc-500 animate-pulse">
+                  Synchronizing matrix ledger collections...
+                </div>
+              ) : coupons.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-white/5 rounded-xl text-zinc-500 font-mono text-xs flex flex-col items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-purple-400" />
+                  <span>No operational contract modules assigned to your node workspace signatures.</span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {coupons.slice(0, 4).map((up) => {
+                    const isCurrentEditingTarget = editingId === up.id;
+                    
+                    return (
+                      <div key={up.id} className="border border-white/5 rounded-xl p-4 bg-white/[0.01] transition-all relative group/card">
+                        <AnimatePresence mode="wait">
+                          {!isCurrentEditingTarget ? (
+                            <motion.div 
+                              key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              onClick={() => navigate(`/coupon/${up.id}`)}
+                              className="flex justify-between items-center cursor-pointer w-full"
+                            >
+                              <div className="min-w-0 flex-1 pr-3">
+                                <h5 className="text-sm font-medium text-white truncate">{up.brand}</h5>
+                                <p className="text-xs text-zinc-500 mt-1 truncate">
+                                  Code: <span className="font-mono text-purple-400">{up.code}</span>
+                                </p>
+                              </div>
+                              
+                              <div className="text-right shrink-0 flex items-center gap-3">
+                                <div>
+                                  <p className="text-xs font-mono text-zinc-500 uppercase">Valuation</p>
+                                  <p className="text-sm font-bold text-white mt-0.5">{up.price}</p>
+                                </div>
+                                
+                                <div className="flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity pl-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); initiateEditMode(up); }}
+                                    className="p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/5 text-zinc-400 hover:text-white transition-all h-8 w-8 flex items-center justify-center"
+                                    title="Edit Contract Parameters"
+                                  >
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={deletingId === up.id}
+                                    onClick={(e) => handleDeleteCoupon(e, up.id)}
+                                    className="p-2 rounded-lg border border-red-500/20 bg-red-950/10 hover:bg-red-500 hover:text-white text-red-400 transition-all h-8 w-8 flex items-center justify-center"
+                                    title="Terminate Contract Allocation"
+                                  >
+                                    {deletingId === up.id ? (
+                                      <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ) : (
+                            <motion.form 
+                              key="edit" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                              onSubmit={(e) => handleUpdateCoupon(e, up.id)}
+                              className="w-full space-y-3 pt-1"
+                            >
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-wide">Brand Name</label>
+                                  <input type="text" required value={editBrand} onChange={(e) => setEditBrand(e.target.value)} className="w-full bg-black/40 border border-white/10 focus:border-purple-500/60 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none transition-all" />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-wide">Discount Value</label>
+                                  <input type="text" required value={editDiscount} onChange={(e) => setEditDiscount(e.target.value)} className="w-full bg-black/40 border border-white/10 focus:border-purple-500/60 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none transition-all" />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-wide">Promo Code</label>
+                                  <input type="text" required value={editCode} onChange={(e) => setEditCode(e.target.value)} className="w-full bg-black/40 border border-white/10 focus:border-purple-500/60 text-xs text-purple-300 font-mono tracking-wider rounded-lg px-2 py-1.5 focus:outline-none transition-all" />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-wide">Price Vector</label>
+                                  <input type="text" required value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full bg-black/40 border border-white/10 focus:border-purple-500/60 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none transition-all" />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-wide">Expiry Target</label>
+                                  <input type="date" value={editExpiry} onChange={(e) => setEditExpiry(e.target.value)} className="w-full bg-black/40 border border-white/10 focus:border-purple-500/60 text-[11px] text-zinc-400 rounded-lg px-2 py-1 focus:outline-none transition-all" />
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
+                                <button
+                                  type="button" disabled={updateLoading} onClick={() => setEditingId(null)}
+                                  className="px-3 py-1.5 text-[11px] font-mono text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all disabled:opacity-50"
+                                >
+                                  Abort
+                                </button>
+                                <button
+                                  type="submit" disabled={updateLoading}
+                                  className="px-4 py-1.5 text-[11px] font-mono font-bold text-black bg-white hover:bg-zinc-200 rounded-lg shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                                >
+                                  {updateLoading ? (
+                                    <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <>Commit</>
+                                  )}
+                                </button>
+                              </div>
+                            </motion.form>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
           </div>
@@ -281,7 +576,10 @@ export default function Dashboard() {
                 <Sparkles className="w-4 h-4 text-purple-400" /> Command Controls
               </h4>
               <div className="space-y-2.5">
-                <button className="w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-medium shadow-[0_0_15px_rgba(124,58,237,0.2)] transition-all flex items-center justify-center gap-2 group">
+                <button 
+                  onClick={() => navigate('/upload')}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-medium shadow-[0_0_15px_rgba(124,58,237,0.2)] transition-all flex items-center justify-center gap-2 group"
+                >
                   <PlusCircle className="w-4 h-4" /> Inject New Yield Token
                 </button>
                 <button className="w-full py-2.5 px-4 border border-white/5 hover:border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-zinc-300 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-2">
@@ -314,7 +612,6 @@ export default function Dashboard() {
               <div className="relative pl-4 border-l border-white/5 space-y-6 text-xs">
                 {ACTIVITY_FEED.map((act) => (
                   <div key={act.id} className="relative space-y-1">
-                    {/* Ring timeline bullet point node */}
                     <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-purple-500 ring-4 ring-[#030014]" />
                     <p className="text-zinc-300 leading-relaxed font-normal">{act.text}</p>
                     <p className="text-[10px] font-mono text-zinc-600">{act.time}</p>
