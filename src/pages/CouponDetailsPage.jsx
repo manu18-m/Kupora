@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, ShieldCheck, Clock, Copy, Check, ArrowLeft, 
   ThumbsUp, MessageSquare, AlertTriangle, ExternalLink, 
-  HelpCircle, Star, Share2, CornerDownRight 
+  HelpCircle, Star, Share2, CornerDownRight, CreditCard, Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,7 +22,7 @@ const SELECTED_COUPON = {
   aiConfidence: 99,
   seller: {
     name: 'DevOps_Liquidity_Alpha',
-    handle: '@devops_alpha', // ⚡ Added identifier handle context
+    handle: '@devops_alpha', 
     verified: true,
     score: 98.6,
     totalSales: 1420,
@@ -80,7 +80,21 @@ export default function CouponDetailsPage() {
   const [upvotes, setUpvotes] = useState(142);
   const [voted, setVoted] = useState(false);
 
+  // --- REVEAL & PURCHASE SYSTEM STATES ---
+  const [isPurchased, setIsPurchased] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handlePurchaseSimulation = () => {
+    setIsProcessing(true);
+    // Simulate payment clearing latency loop
+    setTimeout(() => {
+      setIsProcessing(false);
+      setIsPurchased(true);
+    }, 1500);
+  };
+
   const triggerCopy = () => {
+    if (!isPurchased) return;
     navigator.clipboard.writeText(SELECTED_COUPON.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -158,16 +172,65 @@ export default function CouponDetailsPage() {
               <CountdownEngine expiryDate={SELECTED_COUPON.expiry} />
             </div>
 
-            {/* Interactive Coupon Hash Trigger */}
-            <div className="mt-6 p-1.5 bg-black/40 rounded-xl border border-white/5 flex items-center justify-between group">
-              <span className="font-mono text-sm tracking-wider font-bold text-purple-400 pl-4 select-all">{SELECTED_COUPON.code}</span>
-              <button 
-                onClick={triggerCopy}
-                className={`px-5 py-2.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${copied ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 border' : 'bg-white text-black hover:bg-zinc-200'}`}
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>{copied ? 'Payload Saved' : 'Copy Code'}</span>
-              </button>
+            {/* REVEAL & PURCHASE SYSTEM CONTAINER */}
+            <div className="mt-6 border border-white/5 rounded-xl overflow-hidden bg-black/20 p-1.5">
+              <AnimatePresence mode="wait">
+                {!isPurchased ? (
+                  <motion.div 
+                    key="gate"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col gap-3 p-2 text-center"
+                  >
+                    <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-zinc-400 text-xs font-mono">
+                        <Lock className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Code Signature:</span>
+                      </div>
+                      <span className="font-mono text-sm tracking-widest text-zinc-600 select-none blur-[3px]">
+                        ••••••••••
+                      </span>
+                    </div>
+
+                    <button 
+                      onClick={handlePurchaseSimulation}
+                      disabled={isProcessing}
+                      className="w-full py-3 rounded-lg text-xs font-mono font-bold tracking-wider uppercase transition-all bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)] disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Clearing Payment Channel...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Unlock Target Allocation Asset</span>
+                        </>
+                      )}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="revealed"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between p-1 bg-black/40 rounded-lg group"
+                  >
+                    <span className="font-mono text-sm tracking-wider font-bold text-purple-400 pl-4 select-all">
+                      {SELECTED_COUPON.code}
+                    </span>
+                    <button 
+                      onClick={triggerCopy}
+                      className={`px-5 py-2.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${copied ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 border' : 'bg-white text-black hover:bg-zinc-200'}`}
+                    >
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      <span>{copied ? 'Payload Saved' : 'Copy Code'}</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
 
@@ -204,7 +267,6 @@ export default function CouponDetailsPage() {
             <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">Cryptographic Seller Node Profile</h3>
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-              {/* ⚡ Dynamic Route Links Added to Avatar and Name Triggers Below */}
               <div className="flex items-center gap-3">
                 <div 
                   onClick={() => navigate(`/seller/${SELECTED_COUPON.seller.handle}`)}

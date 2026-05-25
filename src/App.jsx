@@ -7,7 +7,10 @@ import {
   useNavigate
 } from 'react-router-dom';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
@@ -17,22 +20,53 @@ import SellerProfilePage from './pages/SellerProfilePage';
 import UploadCouponPage from './pages/UploadCouponPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ChatPage from './pages/ChatPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 
-// --- MOCK AUTH SYSTEM ---
-const useAuth = () => {
-  const [user] = useState({
-    isAuthenticated: true,
-    role: 'admin', // change to: 'user' | 'seller' | 'admin'
-    handle: '@devops_alpha',
-  });
+// --- REAL FIREBASE AUTHENTICATION CONTEXT ---
+const AuthContext = createContext(null);
 
-  return user;
-};
+export function AuthProvider({ children }) {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          setRole(userDoc.data().role);
+        } else {
+          setRole('user'); 
+        }
+      } else {
+        setCurrentUser(null);
+        setRole(null);
+      }
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const logout = () => signOut(auth);
+
+  return (
+    <AuthContext.Provider value={{ user: currentUser, role, loading, logout }}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);
 
 // --- DASHBOARD LAYOUT ---
 const DashboardLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen bg-[#030014] text-zinc-100 flex flex-col">
@@ -95,6 +129,22 @@ const DashboardLayout = ({ children }) => {
           >
             + Deploy
           </button>
+
+          {user ? (
+            <button 
+              onClick={() => { logout(); navigate('/'); }}
+              className="text-red-400 hover:text-red-300 transition-colors border-l border-white/5 pl-6"
+            >
+              Sign Out
+            </button>
+          ) : (
+            <button 
+              onClick={() => navigate('/login')}
+              className="text-cyan-400 hover:text-cyan-300 transition-colors border-l border-white/5 pl-6"
+            >
+              Sign In
+            </button>
+          )}
         </nav>
       </header>
 
@@ -108,16 +158,16 @@ const DashboardLayout = ({ children }) => {
 
 // --- PROTECTED ROUTE ---
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const auth = useAuth();
+  const { user, role } = useAuth();
   const location = useLocation();
 
   // Not authenticated
-  if (!auth.isAuthenticated) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Role not allowed
-  if (allowedRoles && !allowedRoles.includes(auth.role)) {
+  if (allowedRoles && !allowedRoles.includes(role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -126,95 +176,99 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <AuthProvider>
+      <Router>
+        <Routes>
 
-        {/* PUBLIC ROUTE */}
-        <Route path="/" element={<LandingPage />} />
+          {/* PUBLIC ROUTES */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
 
-        {/* MARKETPLACE */}
-        <Route
-          path="/browse"
-          element={
-            <DashboardLayout>
-              <MarketplacePage />
-            </DashboardLayout>
-          }
-        />
-
-        {/* COUPON DETAILS */}
-        <Route
-          path="/coupon/:id"
-          element={
-            <DashboardLayout>
-              <CouponDetailsPage />
-            </DashboardLayout>
-          }
-        />
-
-        {/* SELLER PROFILE */}
-        <Route
-          path="/seller/:handle"
-          element={
-            <DashboardLayout>
-              <SellerProfilePage />
-            </DashboardLayout>
-          }
-        />
-
-        {/* USER DASHBOARD */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
+          {/* MARKETPLACE */}
+          <Route
+            path="/browse"
+            element={
               <DashboardLayout>
-                <Dashboard />
+                <MarketplacePage />
               </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+            }
+          />
 
-        {/* CHAT */}
-        <Route
-          path="/chat"
-          element={
-            <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
+          {/* COUPON DETAILS */}
+          <Route
+            path="/coupon/:id"
+            element={
               <DashboardLayout>
-                <ChatPage />
+                <CouponDetailsPage />
               </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+            }
+          />
 
-        {/* SELLER UPLOAD */}
-        <Route
-          path="/upload"
-          element={
-            <ProtectedRoute allowedRoles={['seller', 'admin']}>
+          {/* SELLER PROFILE */}
+          <Route
+            path="/seller/:handle"
+            element={
               <DashboardLayout>
-                <UploadCouponPage />
+                <SellerProfilePage />
               </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+            }
+          />
 
-        {/* ADMIN */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <DashboardLayout>
-                <AdminDashboard />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* USER DASHBOARD */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
+                <DashboardLayout>
+                  <Dashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* FALLBACK */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+          {/* CHAT */}
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
+                <DashboardLayout>
+                  <ChatPage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
-      </Routes>
-    </Router>
+          {/* SELLER UPLOAD */}
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute allowedRoles={['seller', 'admin']}>
+                <DashboardLayout>
+                  <UploadCouponPage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ADMIN */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* FALLBACK */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
