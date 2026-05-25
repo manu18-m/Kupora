@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom'; 
-import { collection, getDocs } from 'firebase/firestore'; // ⚡ Added Firestore methods
-import { db } from '../firebase'; // ⚡ Imported db instance
+import { collection, getDocs } from 'firebase/firestore'; 
+import { db } from '../firebase'; 
 import { 
   Search, Filter, ChevronDown, CheckCircle, Clock, 
   Sparkles, Heart, Tag, TrendingUp, Grid3X3, List,
   Verified, Star, CalendarDays, X
 } from 'lucide-react';
 
-// --- DEMO FILTERS SCHEMA (MAINTAINED) ---
+// --- DEMO FILTERS SCHEMA ---
 const DEMO_CATEGORIES = [
   'All Deals', 'SaaS Tools', 'Infrastructure', 'Design Resources', 'AI & ML', 'Marketing Plugins', 'Cloud Hosting'
 ];
@@ -23,7 +23,6 @@ const DEMO_FILTERS = {
 // --- COUNTDOWN TIMER COMPONENT ---
 const CountdownTimer = ({ expiryDate }) => {
   const calculateTimeLeft = () => {
-    // Graceful validation if expiry string matches alternative patterns
     if (!expiryDate || expiryDate.includes('Continuous')) return {};
     
     const difference = +new Date(expiryDate) - +new Date();
@@ -79,7 +78,6 @@ const CouponCard = ({ coupon }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Fallback logos match placeholder arrays safely if storage uploads are skipped
   const fallbackLogo = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg";
 
   return (
@@ -92,7 +90,6 @@ const CouponCard = ({ coupon }) => {
       onClick={() => navigate(`/coupon/${coupon.id}`)} 
       className="glass-card glass-card-hover rounded-2xl p-6 flex flex-col justify-between min-h-[300px] relative overflow-hidden group cursor-pointer"
     >
-      {/* Background Decorative Glow */}
       <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-purple-500/10 to-transparent blur-2xl pointer-events-none group-hover:from-purple-500/20 transition-all duration-300" />
       
       <div>
@@ -220,7 +217,6 @@ export default function MarketplacePage() {
             category: data.category || 'SaaS Tools',
             expiry: data.expiry || 'Continuous Monitoring',
             price: data.price || '$0.00 Base',
-            // Simulated fallback properties for UI parity stability matching form uploads
             trustScore: data.trustScore || Math.floor(Math.random() * 8) + 92,
             successRate: data.successRate || Math.floor(Math.random() * 6) + 94,
             logo: data.logo || null
@@ -237,11 +233,24 @@ export default function MarketplacePage() {
     fetchCouponsFromFirestore();
   }, []);
 
+  // --- DYNAMIC TIME-DELTA FILTERING ARRAYS ---
   const filteredCoupons = coupons.filter(coupon => {
     const matchesSearch = coupon.brand.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           coupon.discount.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === 'All Deals' || coupon.category === activeCategory;
-    return matchesSearch && matchesCategory;
+    
+    // Safety check verification to filter out expired listings matching standard system date
+    let isNotExpired = true;
+    if (coupon.expiry && typeof coupon.expiry === 'string' && !coupon.expiry.includes('Continuous')) {
+      const expirationDate = new Date(coupon.expiry);
+      const currentDate = new Date();
+      
+      if (!isNaN(expirationDate.getTime())) {
+        isNotExpired = expirationDate >= currentDate;
+      }
+    }
+
+    return matchesSearch && matchesCategory && isNotExpired;
   });
 
   return (
