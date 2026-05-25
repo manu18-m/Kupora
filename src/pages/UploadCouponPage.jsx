@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc } from 'firebase/firestore'; // ⚡ Added Firestore methods
+import { db, auth } from '../firebase'; // ⚡ Imported db and auth engines
 
 // --- ATOMIC INLINE SVGS FOR CRASH PROTECTION ---
 const UploadIcon = () => <svg className="w-8 h-8 text-zinc-500 group-hover:text-purple-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
@@ -28,6 +30,11 @@ export default function UploadCouponPage() {
   const [uploadedLogo, setUploadedLogo] = useState(null);
   const [aiStatus, setAiStatus] = useState('idle'); // idle | scanning | verified
   const [suggestedPricing, setSuggestedPricing] = useState(null);
+
+  // --- DATABASE TRANSACTION STATES ---
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [transactionError, setTransactionError] = useState('');
+  const [transactionSuccess, setTransactionSuccess] = useState(false);
 
   // Dynamic pricing strategy engine simulator
   useEffect(() => {
@@ -67,6 +74,61 @@ export default function UploadCouponPage() {
     }
   };
 
+  // --- FIRESTORE SUBMISSION FLOW ---
+  const handleUploadCoupon = async (e) => {
+    e.preventDefault();
+    setTransactionError('');
+    setTransactionSuccess(false);
+    setSubmitLoading(true);
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setTransactionError('Authentication fault: Unassigned session key. Sign in to mint parameters.');
+      setSubmitLoading(false);
+      return;
+    }
+
+    if (!brand.trim() || !code.trim() || !discount.trim() || !price.trim()) {
+      setTransactionError('Validation trace: Explicit data constraints require full configuration matrices.');
+      setSubmitLoading(false);
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'coupons'), {
+        brand: brand.trim(),
+        code: code.trim().toUpperCase(),
+        discount: discount.trim(),
+        category: category,
+        expiry: expiry || 'Continuous Monitoring',
+        price: price.trim(),
+        terms: terms.trim() || 'Standard enterprise allocation rules apply.',
+        sellerId: currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
+
+      setTransactionSuccess(true);
+      
+      // Auto-clear configuration states
+      setBrand('');
+      setDiscount('');
+      setCode('');
+      setExpiry('');
+      setPrice('');
+      setTerms('');
+      setUploadedLogo(null);
+
+      setTimeout(() => {
+        navigate('/browse');
+      }, 2000);
+
+    } catch (err) {
+      setTransactionError(err.message.replace('Firebase: ', ''));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#030014] text-zinc-200 font-sans antialiased relative pb-24">
       {/* Background Glow Structure */}
@@ -95,7 +157,21 @@ export default function UploadCouponPage() {
             <p className="text-xs text-zinc-500 mt-1">Inject functional code elements into the global contextual verification pipeline.</p>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-6" onSubmit={handleUploadCoupon}>
+            
+            {/* TRANSACTION NOTIFICATIONS TRAY */}
+            <AnimatePresence mode="popLayout">
+              {transactionError && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="bg-red-950/30 border border-red-900/40 text-red-400 p-4 rounded-xl text-xs font-mono">
+                  {transactionError}
+                </motion.div>
+              )}
+              {transactionSuccess && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="bg-emerald-950/30 border border-emerald-900/40 text-emerald-400 p-4 rounded-xl text-xs font-mono flex items-center gap-2">
+                  <CheckIcon /> Contract successfully initialized. Syncing metadata across ledger layers...
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             {/* DRAG & DROP LOGO AREA */}
             <div className="space-y-2">
@@ -229,10 +305,19 @@ export default function UploadCouponPage() {
 
             {/* MINT CALL TO ACTION TRIGGER */}
             <button 
-              type="button" onClick={() => navigate('/browse')}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium text-sm py-3.5 rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all flex items-center justify-center gap-2 mt-4"
+              type="submit" disabled={submitLoading}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium text-sm py-3.5 rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
             >
-              <span>Broadcast Allocation Parameters</span> <ArrowRightIcon />
+              {submitLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Committing Contract to Ledger...</span>
+                </>
+              ) : (
+                <>
+                  <span>Broadcast Allocation Parameters</span> <ArrowRightIcon />
+                </>
+              )}
             </button>
           </form>
         </div>
