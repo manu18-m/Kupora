@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom'; 
-import { collection, getDocs, query, where } from 'firebase/firestore'; // ⚡ Verified all query methods are imported
+import { collection, getDocs, query, where } from 'firebase/firestore'; 
 import { db } from '../firebase'; 
 import { 
   Search, Filter, ChevronDown, CheckCircle, Clock, 
   Sparkles, Heart, Tag, TrendingUp, Grid3X3, List,
   Verified, Star, CalendarDays, X
 } from 'lucide-react';
+import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 // --- DEMO FILTERS SCHEMA ---
 const DEMO_CATEGORIES = [
@@ -169,7 +171,7 @@ const CouponCard = ({ coupon }) => {
 };
 
 // --- SIDEBAR FILTER SECTION ---
-const FilterSidebar = ({ filters }) => (
+const FilterSidebar = ({ filters, loading }) => (
   <div className="space-y-6 glass-card rounded-2xl p-6 border border-white/5 sticky top-24 self-start">
     <div className="flex items-center justify-between pb-4 border-b border-white/5">
       <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -178,19 +180,30 @@ const FilterSidebar = ({ filters }) => (
       <button className="text-xs text-zinc-500 hover:text-white transition-colors">Reset</button>
     </div>
     
-    {Object.entries(filters).map(([key, options]) => (
-      <div key={key} className="space-y-3">
-        <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-600">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
-        <div className="space-y-2">
-          {options.map(option => (
-            <label key={option} className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-white cursor-pointer group">
-              <input type="checkbox" className="w-4 h-4 rounded-md border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500/40" />
-              {option}
-            </label>
-          ))}
-        </div>
+    {loading ? (
+      <div className="space-y-6">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="space-y-2">
+            <Skeleton width={80} height={12} className="mb-1" />
+            <Skeleton count={3} height={16} width="90%" className="mb-1" />
+          </div>
+        ))}
       </div>
-    ))}
+    ) : (
+      Object.entries(filters).map(([key, options]) => (
+        <div key={key} className="space-y-3">
+          <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-600">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
+          <div className="space-y-2">
+            {options.map(option => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-white cursor-pointer group">
+                <input type="checkbox" className="w-4 h-4 rounded-md border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500/40" />
+                {option}
+              </label>
+            ))}
+          </div>
+        </div>
+      ))
+    )}
   </div>
 );
 
@@ -202,11 +215,10 @@ export default function MarketplacePage() {
   const [activeCategory, setActiveCategory] = useState('All Deals');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // --- REAL-TIME FIRESTORE DATA ACQUISITION LAYERS (MODERATED) ---
+  // --- REAL-TIME FIRESTORE DATA ACQUISITION LAYERS ---
   useEffect(() => {
     const fetchApprovedCouponsFromFirestore = async () => {
       try {
-        // ⚡ Isolated collection search using verified constraints logic
         const approvedCouponsQuery = query(
           collection(db, 'coupons'), 
           where('status', '==', 'approved')
@@ -239,7 +251,7 @@ export default function MarketplacePage() {
     fetchApprovedCouponsFromFirestore();
   }, []);
 
-  // --- DYNAMIC TIME-DELTA FILTERING ARRAYS ---
+  // --- DYNAMIC FILTERING MATRICES ---
   const filteredCoupons = coupons.filter(coupon => {
     const matchesSearch = coupon.brand.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           coupon.discount.toLowerCase().includes(searchQuery.toLowerCase());
@@ -259,117 +271,149 @@ export default function MarketplacePage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#030014] text-zinc-100 antialiased font-sans relative">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-gradient-to-b from-purple-600/10 via-cyan-500/5 to-transparent blur-[140px] pointer-events-none z-0" />
+    <SkeletonTheme baseColor="#0d0a27" highlightColor="#1a1540">
+      <div className="min-h-screen bg-[#030014] text-zinc-100 antialiased font-sans relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-gradient-to-b from-purple-600/10 via-cyan-500/5 to-transparent blur-[140px] pointer-events-none z-0" />
 
-      {/* HEADER SECTION: Search & Category Tabs */}
-      <div className="sticky top-0 z-40 bg-[#030014]/60 backdrop-blur-2xl border-b border-white/5 pt-6 pb-2 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-                Browse AI-Verified <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 neon-text-purple">Deals</span>
-              </h1>
+        {/* HEADER SECTION: Search & Category Tabs */}
+        <div className="sticky top-0 z-40 bg-[#030014]/60 backdrop-blur-2xl border-b border-white/5 pt-6 pb-2 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+                  Browse AI-Verified <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 neon-text-purple">Deals</span>
+                </h1>
+                
+                <button 
+                  onClick={() => navigate('/upload')}
+                  className="mt-3 text-xs font-mono font-bold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 bg-purple-950/20 border border-purple-900/30 px-3 py-1.5 rounded-xl group"
+                >
+                  <span>+ Upload Coupon</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                </button>
+              </div>
               
-              <button 
-                onClick={() => navigate('/upload')}
-                className="mt-3 text-xs font-mono font-bold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 bg-purple-950/20 border border-purple-900/30 px-3 py-1.5 rounded-xl group"
-              >
-                <span>+ Defer New Allocation Contract</span>
-                <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-              </button>
-            </div>
-            
-            <div className="relative w-full sm:w-80 group">
-              <Search className="absolute left-4 top-3.5 w-5 h-5 text-zinc-500 group-focus-within:text-purple-400 transition-colors" />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search infrastructure or SaaS codes..." 
-                className="w-full bg-white/[0.02] border border-white/10 focus:border-purple-500/50 rounded-2xl pl-12 pr-10 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all placeholder-zinc-600"
-              />
-              {searchQuery && (
-                <X className="absolute right-3.5 top-3.5 w-5 h-5 text-zinc-600 cursor-pointer hover:text-white" onClick={() => setSearchQuery('')} />
-              )}
-            </div>
-          </div>
-
-          {/* CATEGORY TABS CONTAINER */}
-          <div className="relative overflow-x-auto no-scrollbar pb-2 flex gap-1.5 font-medium text-sm border-b border-white/5">
-            {DEMO_CATEGORIES.map(category => (
-              <button 
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl transition-all ${activeCategory === category ? 'bg-white/5 text-white shadow-inner' : 'text-zinc-500 hover:text-white hover:bg-white/[0.02]'}`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN CONTENT AREA: SIDEBAR + GRID */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10 grid grid-cols-1 md:grid-cols-[280px_1fr] gap-10">
-        <FilterSidebar filters={DEMO_FILTERS} />
-
-        <div className="space-y-8">
-          <div className="flex items-center justify-between gap-4 glass-card rounded-2xl p-4 border border-white/5">
-            <p className="text-sm text-zinc-400">
-              Showing <span className="font-semibold text-white font-mono">{loading ? '...' : filteredCoupons.length}</span> verified active segments
-            </p>
-            <div className="flex items-center gap-3">
-              <button className="text-xs text-zinc-500 font-medium flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 hover:text-white hover:border-white/10">
-                Sorted By: Trust Score <ChevronDown className="w-4 h-4" />
-              </button>
-              <div className="flex items-center gap-3 text-zinc-600 border-l border-white/5 pl-3">
-                <Grid3X3 className="w-5 h-5 text-purple-400" />
-                <List className="w-5 h-5 hover:text-zinc-400 transition-colors" />
+              <div className="relative w-full sm:w-80 group">
+                <Search className="absolute left-4 top-3.5 w-5 h-5 text-zinc-500 group-focus-within:text-purple-400 transition-colors" />
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search infrastructure or SaaS codes..." 
+                  className="w-full bg-white/[0.02] border border-white/10 focus:border-purple-500/50 rounded-2xl pl-12 pr-10 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all placeholder-zinc-600"
+                />
+                {searchQuery && (
+                  <X className="absolute right-3.5 top-3.5 w-5 h-5 text-zinc-600 cursor-pointer hover:text-white" onClick={() => setSearchQuery('')} />
+                )}
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-wrap gap-2 text-xs font-mono font-medium">
-            <div className="text-zinc-600 uppercase tracking-wider py-1.5 pr-2">Active Node Constraints:</div>
-            <div className="bg-purple-950/40 text-purple-400 border border-purple-900/30 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-              {activeCategory}
-            </div>
-          </div>
-
-          {/* Dynamic Content Grid State Orchestration */}
-          {loading ? (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-12">
-              {[1, 2, 4].map(shimmerId => (
-                <div key={shimmerId} className="glass-card rounded-2xl p-6 min-h-[300px] border border-white/5 animate-pulse flex flex-col justify-between">
-                  <div className="flex gap-4"><div className="w-14 h-14 bg-white/5 rounded-2xl" /><div className="space-y-2 flex-1 pt-2"><div className="h-4 bg-white/5 rounded w-1/3" /><div className="h-3 bg-white/5 rounded w-1/4" /></div></div>
-                  <div className="h-8 bg-white/5 rounded w-3/4 my-4" />
-                  <div className="h-10 bg-white/5 rounded w-full mt-auto" />
-                </div>
+            {/* CATEGORY TABS CONTAINER */}
+            <div className="relative overflow-x-auto no-scrollbar pb-2 flex gap-1.5 font-medium text-sm border-b border-white/5">
+              {DEMO_CATEGORIES.map(category => (
+                <button 
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`flex-shrink-0 px-4 py-2.5 rounded-xl transition-all ${activeCategory === category ? 'bg-white/5 text-white shadow-inner' : 'text-zinc-500 hover:text-white hover:bg-white/[0.02]'}`}
+                >
+                  {category}
+                </button>
               ))}
             </div>
-          ) : (
-            <motion.div layout className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-12">
-              <AnimatePresence mode="popLayout">
-                {filteredCoupons.map(coupon => (
-                  <CouponCard key={coupon.id} coupon={coupon} />
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          )}
-
-          {/* Empty State UI Fallback */}
-          {!loading && filteredCoupons.length === 0 && (
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              className="glass-card rounded-2xl p-12 text-center text-zinc-500 text-sm font-mono"
-            >
-              No verified validation arrays match the current segment queries.
-            </motion.div>
-          )}
+          </div>
         </div>
-      </main>
-    </div>
+
+        {/* MAIN CONTENT AREA: SIDEBAR + GRID */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10 grid grid-cols-1 md:grid-cols-[280px_1fr] gap-10">
+          <FilterSidebar filters={DEMO_FILTERS} loading={loading} />
+
+          <div className="space-y-8">
+            <div className="flex items-center justify-between gap-4 glass-card rounded-2xl p-4 border border-white/5">
+              <p className="text-sm text-zinc-400">
+                {loading ? (
+                  <Skeleton width={180} height={16} />
+                ) : (
+                  <>Showing <span className="font-semibold text-white font-mono">{filteredCoupons.length}</span> verified coupons</>
+                )}
+              </p>
+              <div className="flex items-center gap-3">
+                <button className="text-xs text-zinc-500 font-medium flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 hover:text-white hover:border-white/10">
+                  Sorted By: Trust Score <ChevronDown className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-3 text-zinc-600 border-l border-white/5 pl-3">
+                  <Grid3X3 className="w-5 h-5 text-purple-400" />
+                  <List className="w-5 h-5 hover:text-zinc-400 transition-colors" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-xs font-mono font-medium">
+              <div className="text-zinc-600 uppercase tracking-wider py-1.5 pr-2">Active Filters:</div>
+              <div className="bg-purple-950/40 text-purple-400 border border-purple-900/30 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                {activeCategory}
+              </div>
+            </div>
+
+            {/* Dynamic Loading Shimmer Grid Infrastructure */}
+            {loading ? (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-12">
+                {[1, 2, 3, 4].map(shimmerId => (
+                  <div key={shimmerId} className="glass-card rounded-2xl p-6 min-h-[300px] border border-white/5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="flex items-center gap-4 w-full">
+                          <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0">
+                            <Skeleton width={56} height={56} />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <Skeleton width="45%" height={18} />
+                            <Skeleton width="25%" height={12} />
+                          </div>
+                        </div>
+                        <Skeleton circle width={32} height={32} />
+                      </div>
+                      <div className="space-y-2 mb-5">
+                        <Skeleton width="60%" height={28} />
+                        <Skeleton width="30%" height={14} />
+                      </div>
+                      <div className="flex justify-between items-center border-t border-white/5 pt-4 mb-5">
+                        <Skeleton width={90} height={20} className="rounded-full" />
+                        <Skeleton width={80} height={20} className="rounded-full" />
+                      </div>
+                    </div>
+                    <div className="flex items-end justify-between gap-4 mt-auto">
+                      <div className="space-y-2 flex-1">
+                        <Skeleton width="50%" height={12} />
+                        <Skeleton width="40%" height={12} />
+                      </div>
+                      <Skeleton width={100} height={38} className="rounded-xl" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <motion.div layout className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-12">
+                <AnimatePresence mode="popLayout">
+                  {filteredCoupons.map(coupon => (
+                    <CouponCard key={coupon.id} coupon={coupon} />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
+
+            {/* Empty State Fallback */}
+            {!loading && filteredCoupons.length === 0 && (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                className="glass-card rounded-2xl p-12 text-center text-zinc-500 text-sm font-mono"
+              >
+                No verified coupons match the current filter criteria.
+              </motion.div>
+            )}
+          </div>
+        </main>
+      </div>
+    </SkeletonTheme>
   );
 }
