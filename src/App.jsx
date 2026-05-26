@@ -24,6 +24,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 
 import { Toaster } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- REAL FIREBASE AUTHENTICATION CONTEXT ---
 const AuthContext = createContext(null);
@@ -166,17 +167,143 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+// --- WRAPPER FOR FLUID PAGE TRANSITIONS ---
+const PageTransitionWrapper = ({ children }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+      className="w-full h-full min-h-0 min-w-0"
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// --- ANIMATED ROUTER ORCHESTRATION ---
+function AnimatedAppRoutes() {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* PUBLIC ROUTES */}
+        <Route path="/" element={<PageTransitionWrapper><LandingPage /></PageTransitionWrapper>} />
+        <Route path="/login" element={<PageTransitionWrapper><LoginPage /></PageTransitionWrapper>} />
+        <Route path="/signup" element={<PageTransitionWrapper><SignupPage /></PageTransitionWrapper>} />
+
+        {/* MARKETPLACE */}
+        <Route
+          path="/browse"
+          element={
+            <DashboardLayout>
+              <PageTransitionWrapper>
+                <MarketplacePage />
+              </PageTransitionWrapper>
+            </DashboardLayout>
+          }
+        />
+
+        {/* COUPON DETAILS */}
+        <Route
+          path="/coupon/:id"
+          element={
+            <DashboardLayout>
+              <PageTransitionWrapper>
+                <CouponDetailsPage />
+              </PageTransitionWrapper>
+            </DashboardLayout>
+          }
+        />
+
+        {/* SELLER PROFILE */}
+        <Route
+          path="/seller/:handle"
+          element={
+            <DashboardLayout>
+              <PageTransitionWrapper>
+                <SellerProfilePage />
+              </PageTransitionWrapper>
+            </DashboardLayout>
+          }
+        />
+
+        {/* USER DASHBOARD */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
+              <DashboardLayout>
+                <PageTransitionWrapper>
+                  <Dashboard />
+                </PageTransitionWrapper>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* CHAT */}
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
+              <DashboardLayout>
+                <PageTransitionWrapper>
+                  <ChatPage />
+                </PageTransitionWrapper>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* SELLER UPLOAD */}
+        <Route
+          path="/upload"
+          element={
+            <ProtectedRoute allowedRoles={['seller', 'admin']}>
+              <DashboardLayout>
+                <PageTransitionWrapper>
+                  <UploadCouponPage />
+                </PageTransitionWrapper>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ADMIN */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <DashboardLayout>
+                <PageTransitionWrapper>
+                  <AdminDashboard />
+                </PageTransitionWrapper>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* FALLBACK */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <Router>
-        {/* ⚡ GLOBAL TOAST SYSTEM MOUNTED SAFELY UNDER ROUTER LAYER CLOSURES */}
+        {/* GLOBAL TOAST SYSTEM */}
         <Toaster
           position="top-right"
           containerStyle={{
             top: 20,
             right: 20,
-            zIndex: 99999, // Guarantee isolation overhead relative stacking contexts
+            zIndex: 99999,
           }}
           toastOptions={{
             style: {
@@ -206,93 +333,7 @@ function App() {
           }}
         />
 
-        <Routes>
-          {/* PUBLIC ROUTES */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-
-          {/* MARKETPLACE */}
-          <Route
-            path="/browse"
-            element={
-              <DashboardLayout>
-                <MarketplacePage />
-              </DashboardLayout>
-            }
-          />
-
-          {/* COUPON DETAILS */}
-          <Route
-            path="/coupon/:id"
-            element={
-              <DashboardLayout>
-                <CouponDetailsPage />
-              </DashboardLayout>
-            }
-          />
-
-          {/* SELLER PROFILE */}
-          <Route
-            path="/seller/:handle"
-            element={
-              <DashboardLayout>
-                <SellerProfilePage />
-              </DashboardLayout>
-            }
-          />
-
-          {/* USER DASHBOARD */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
-                <DashboardLayout>
-                  <Dashboard />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* CHAT */}
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute allowedRoles={['user', 'seller', 'admin']}>
-                <DashboardLayout>
-                  <ChatPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* SELLER UPLOAD */}
-          <Route
-            path="/upload"
-            element={
-              <ProtectedRoute allowedRoles={['seller', 'admin']}>
-                <DashboardLayout>
-                  <UploadCouponPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ADMIN */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout>
-                  <AdminDashboard />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* FALLBACK */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AnimatedAppRoutes />
       </Router>
     </AuthProvider>
   );
