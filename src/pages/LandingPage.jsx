@@ -195,7 +195,7 @@ export default function LandingPage() {
   </button>
 
   <button
-    onClick={() => navigate('/login')}
+    onClick={() => navigate('/browse')}
     className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all transform hover:scale-[1.02]"
   >
     Launch App
