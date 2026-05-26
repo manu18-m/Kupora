@@ -21,7 +21,7 @@ const Sidebar = ({ isOpen, toggleSidebar, onNavigate }) => {
   ];
 
   return (
-    <aside className={`fixed top-0 left-0 bottom-0 z-50 w-64 bg-[#050215] border-r border-r-white/5 p-6 flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+    <aside className={`fixed top-0 left-0 bottom-0 z-50 w-[85vw] sm:w-64 bg-[#050215] border-r border-r-white/5 p-6 flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-base text-white">
@@ -185,7 +185,7 @@ export default function Dashboard() {
             </button>
             <AnimatePresence>
               {notificationsOpen && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute right-0 mt-2 w-80 bg-[#0b0826] border border-white/10 rounded-xl p-4 shadow-2xl z-50 overflow-y-auto max-h-96">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute right-0 mt-2 w-[90vw] sm:w-80 bg-[#0b0826] border border-white/10 rounded-xl p-4 shadow-2xl z-50 overflow-y-auto max-h-96">
                   {notifications.map(n => <div key={n.id} onClick={async() => await updateDoc(doc(db,'notifications',n.id),{read:true})} className={`p-2 rounded-lg text-xs mb-1 cursor-pointer transition-colors ${!n.read ? 'bg-purple-900/20 text-white' : 'text-zinc-400 hover:bg-white/5'}`}>{n.message}</div>)}
                 </motion.div>
               )}
@@ -194,11 +194,11 @@ export default function Dashboard() {
         </header>
 
         {/* CORE WORKSPACE FRAME */}
-        <main className="flex-1 p-4 sm:p-8 max-w-[1600px] w-full mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8">
           <div className="xl:col-span-8 space-y-8">
             
             {/* HERO INSIGHT METRIC BARS */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="glass-panel border border-white/5 p-6 rounded-2xl bg-white/[0.01]">
                 <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">Total Revenue</span>
                 <div className="text-2xl font-extrabold text-white mt-1">${earnings.totalRevenue.toFixed(2)}</div>
@@ -273,9 +273,9 @@ export default function Dashboard() {
               <h4 className="text-sm font-semibold text-white">Your Coupons</h4>
               <div className="space-y-2">
                 {coupons.map(up => (
-                  <div key={up.id} className="border border-white/5 rounded-xl p-4 flex justify-between items-center bg-black/20">
+                  <div key={up.id} className="border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-black/20">
                     {editingId === up.id ? (
-                      <form onSubmit={(e) => handleUpdateCoupon(e, up.id)} className="flex w-full gap-2 items-center">
+                      <form onSubmit={(e) => handleUpdateCoupon(e, up.id)} className="flex flex-col sm:flex-row w-full gap-2 items-stretch sm:items-center">
                         <input value={editBrand} onChange={(e) => setEditBrand(e.target.value)} className="bg-black/60 border border-white/10 text-white text-xs p-2 rounded flex-1 focus:outline-none" />
                         <button type="submit" className="text-xs font-mono text-black bg-white px-3 py-2 rounded-lg">Commit</button>
                       </form>
