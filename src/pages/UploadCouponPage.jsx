@@ -141,7 +141,7 @@ export default function UploadCouponPage() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-cyan-400 flex items-center justify-center">
             <SparklesIcon className="w-4 h-4 text-white" />
           </div>
-          VoucherAI <span className="text-zinc-600 font-normal">/ Mint Node Allocation</span>
+          Kupora <span className="text-zinc-600 font-normal">/ Mint Node Allocation</span>
         </div>
         <button onClick={() => navigate('/browse')} className="text-xs text-zinc-500 hover:text-white transition-colors">
           Abort Session

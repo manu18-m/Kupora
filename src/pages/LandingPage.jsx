@@ -134,7 +134,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-purple-600/20">
               <Cpu className="w-4 h-4 text-white" />
             </div>
-            <span>Voucher<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">AI</span></span>
+            <span>Kop<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">ora</span></span>
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
@@ -232,7 +232,7 @@ export default function LandingPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mt-6 text-zinc-400 text-lg sm:text-xl max-w-2xl mx-auto font-normal leading-relaxed"
         >
-          Stop copy-pasting expired codes from 2018. VoucherAI processes millions of automated checkout validations every hour to guarantee active match yields.
+          Stop copy-pasting expired codes from 2018. Kupora processes millions of automated checkout validations every hour to guarantee active match yields.
         </motion.p>
 
         {/* PROMPT ACTION BOX */}
@@ -404,7 +404,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="glass-card rounded-2xl p-6 space-y-4">
             <div className="flex gap-1 text-amber-400"><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /><Star className="w-4 h-4 fill-current" /></div>
-            <p className="text-zinc-300 text-sm leading-relaxed">"We integrated VoucherAI into our design workspace procurement flows. Saved $400 on initial environment licenses without clicking traditional spam web interfaces."</p>
+            <p className="text-zinc-300 text-sm leading-relaxed">"We integrated Kupora into our design workspace procurement flows. Saved $400 on initial environment licenses without clicking traditional spam web interfaces."</p>
             <div>
               <p className="text-white text-sm font-semibold">Alex Rivers</p>
               <p className="text-xs text-zinc-500">Principal Engineer, Synapse Digital</p>
@@ -482,7 +482,7 @@ export default function LandingPage() {
             <div className="w-5 h-5 rounded bg-gradient-to-tr from-purple-600 to-cyan-400 flex items-center justify-center">
               <Cpu className="w-2.5 h-2.5 text-white" />
             </div>
-            <span>VoucherAI</span>
+            <span>Kupora</span>
           </div>
           
           <div className="flex gap-8">
@@ -549,7 +549,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="text-center mt-8 text-[11px] text-zinc-600">
-          © {new Date().getFullYear()} VoucherAI Protocols Inc. Distributed Open Analytics Validation System.
+          © {new Date().getFullYear()} Kupora Protocols Inc. Distributed Open Analytics Validation System.
         </div>
       </footer>
     </div>

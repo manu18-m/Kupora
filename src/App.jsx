@@ -80,7 +80,7 @@ const DashboardLayout = ({ children }) => {
           className="flex items-center gap-2 font-bold text-sm text-white cursor-pointer"
         >
           <div className="w-6 h-6 rounded bg-gradient-to-tr from-purple-600 to-cyan-400" />
-          <span>VoucherAI Platform</span>
+          <span>Kupora Platform</span>
         </div>
 
         {/* NAVIGATION */}

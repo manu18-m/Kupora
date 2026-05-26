@@ -134,7 +134,7 @@ export default function AdminDashboard() {
               <CpuIcon />
             </div>
             <div>
-              <span className="block font-black leading-none">VoucherAI</span>
+              <span className="block font-black leading-none">Kupora</span>
               <span className="text-[10px] text-red-400 font-mono tracking-widest uppercase mt-0.5 block">Admin Protocol</span>
             </div>
           </div>

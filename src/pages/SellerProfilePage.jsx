@@ -89,7 +89,7 @@ export default function SellerProfilePage() {
       <nav className="h-16 border-b border-white/5 px-8 flex items-center justify-between sticky top-0 z-50 bg-[#030014]/60 backdrop-blur-xl">
         <div className="flex items-center gap-2 font-bold text-sm text-white">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-cyan-400 flex items-center justify-center"><Zap className="w-4 h-4" /></div>
-          VoucherAI <span className="text-zinc-600 font-normal">/ Creator Matrix</span>
+          Kupora <span className="text-zinc-600 font-normal">/ Creator Matrix</span>
         </div>
       </nav>
 
