@@ -48,7 +48,7 @@ const BrandCard = ({ coupon }) => {
   return (
     <div
       onClick={() => navigate(`/coupon/${coupon.id}`)}
-      className="glass-card glass-card-hover rounded-2xl p-6 min-w-[320px] w-[320px] shrink-0 flex flex-col justify-between relative overflow-hidden group cursor-pointer"
+      className="glass-card glass-card-hover rounded-2xl p-6 min-w-[280px] w-[280px] sm:min-w-[320px] sm:w-[320px] shrink-0 flex flex-col justify-between relative overflow-hidden group cursor-pointer"
     >
       <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-purple-500/10 to-transparent blur-xl pointer-events-none" />
 
@@ -137,7 +137,7 @@ export default function LandingPage() {
             <span>Kop<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">ora</span></span>
           </div>
 
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
+          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-medium text-zinc-400 overflow-x-auto no-scrollbar">
 
   <button
     onClick={() =>
@@ -187,15 +187,15 @@ export default function LandingPage() {
 
          <div className="flex items-center gap-4">
 
-  <button
-    onClick={() => navigate('/dashboard')}
-    className="text-sm font-medium text-zinc-400 hover:text-white transition-colors hidden sm:block"
-  >
+ <button
+  onClick={() => navigate('/login')}
+  className="text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+>
     Sign In
   </button>
 
   <button
-    onClick={() => navigate('/browse')}
+    onClick={() => navigate('/login')}
     className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all transform hover:scale-[1.02]"
   >
     Launch App
@@ -220,7 +220,7 @@ export default function LandingPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-4xl sm:text-7xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.1]"
+          className="text-3xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.1]"
         >
           Zero Dead Clicks.<br/>
           Get Coupons Verified by <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-400 to-cyan-400 neon-text-purple">Contextual AI</span>
