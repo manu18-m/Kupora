@@ -5,7 +5,7 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { db } from '../firebase'; 
 import { 
   ShieldCheck, ArrowRight, Zap, ShoppingBag, 
-  Activity, Star, CornerDownRight, ExternalLink, Mail, Twitter
+  Activity, Star, CornerDownRight, ExternalLink, Mail,
 } from 'lucide-react';
 
 // --- SUB-COMPONENT: DYNAMIC METRIC CARD ---
