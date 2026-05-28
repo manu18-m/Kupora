@@ -175,7 +175,7 @@ useEffect(() => {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-purple-600/20">
               <Cpu className="w-4 h-4 text-white" />
             </div>
-            <span>Kop<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">ora</span></span>
+            <span>Kup<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">ora</span></span>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-medium text-zinc-400 overflow-x-auto no-scrollbar">

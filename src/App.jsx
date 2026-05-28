@@ -250,7 +250,7 @@ function AnimatedAppRoutes() {
             </PageTransitionWrapper>
           }
         />
-
+        
         <Route
           path="/signup"
           element={
