@@ -22,6 +22,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ChatPage from './pages/ChatPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import EmailConfirmedPage from './pages/EmailConfirmedPage';
 
 import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,16 +39,20 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
+
         const userDoc = await getDoc(doc(db, 'users', user.uid));
+
         if (userDoc.exists()) {
           setRole(userDoc.data().role);
         } else {
           setRole('user');
         }
+
       } else {
         setCurrentUser(null);
         setRole(null);
       }
+
       setLoading(false);
     });
 
@@ -73,8 +78,10 @@ const DashboardLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-[#030014] text-zinc-100 flex flex-col relative">
+
       {/* HEADER */}
       <header className="h-16 border-b border-white/5 bg-[#030014]/60 backdrop-blur-xl sticky top-0 z-50 px-6 flex items-center justify-between">
+
         {/* LOGO */}
         <div
           onClick={() => navigate('/')}
@@ -86,10 +93,13 @@ const DashboardLayout = ({ children }) => {
 
         {/* NAVIGATION */}
         <nav className="flex items-center gap-6 text-xs font-mono font-bold uppercase tracking-wider">
+
           <button
             onClick={() => navigate('/browse')}
             className={`hover:text-purple-400 transition-colors ${
-              location.pathname === '/browse' ? 'text-purple-400' : 'text-zinc-400'
+              location.pathname === '/browse'
+                ? 'text-purple-400'
+                : 'text-zinc-400'
             }`}
           >
             Market
@@ -98,7 +108,9 @@ const DashboardLayout = ({ children }) => {
           <button
             onClick={() => navigate('/dashboard')}
             className={`hover:text-purple-400 transition-colors ${
-              location.pathname === '/dashboard' ? 'text-purple-400' : 'text-zinc-400'
+              location.pathname === '/dashboard'
+                ? 'text-purple-400'
+                : 'text-zinc-400'
             }`}
           >
             Dashboard
@@ -107,7 +119,9 @@ const DashboardLayout = ({ children }) => {
           <button
             onClick={() => navigate('/chat')}
             className={`hover:text-purple-400 transition-colors ${
-              location.pathname === '/chat' ? 'text-purple-400' : 'text-zinc-400'
+              location.pathname === '/chat'
+                ? 'text-purple-400'
+                : 'text-zinc-400'
             }`}
           >
             Messages
@@ -116,7 +130,9 @@ const DashboardLayout = ({ children }) => {
           <button
             onClick={() => navigate('/upload')}
             className={`hover:text-purple-400 transition-colors ${
-              location.pathname === '/upload' ? 'text-purple-400' : 'text-zinc-400'
+              location.pathname === '/upload'
+                ? 'text-purple-400'
+                : 'text-zinc-400'
             }`}
           >
             + Upload
@@ -156,12 +172,35 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, role } = useAuth();
   const location = useLocation();
 
+  // NOT LOGGED IN
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
+  // EMAIL NOT VERIFIED
+  if (!user.emailVerified) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  // ROLE NOT ALLOWED
   if (allowedRoles && !allowedRoles.includes(role)) {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
   }
 
   return children;
@@ -174,7 +213,10 @@ const PageTransitionWrapper = ({ children }) => {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+      transition={{
+        duration: 0.24,
+        ease: [0.23, 1, 0.32, 1]
+      }}
       className="w-full h-full min-h-0 min-w-0"
     >
       {children}
@@ -189,10 +231,43 @@ function AnimatedAppRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+
         {/* PUBLIC ROUTES */}
-        <Route path="/" element={<PageTransitionWrapper><LandingPage /></PageTransitionWrapper>} />
-        <Route path="/login" element={<PageTransitionWrapper><LoginPage /></PageTransitionWrapper>} />
-        <Route path="/signup" element={<PageTransitionWrapper><SignupPage /></PageTransitionWrapper>} />
+        <Route
+          path="/"
+          element={
+            <PageTransitionWrapper>
+              <LandingPage />
+            </PageTransitionWrapper>
+          }
+        />
+
+        <Route
+          path="/login"
+          element={
+            <PageTransitionWrapper>
+              <LoginPage />
+            </PageTransitionWrapper>
+          }
+        />
+
+        <Route
+          path="/signup"
+          element={
+            <PageTransitionWrapper>
+              <SignupPage />
+            </PageTransitionWrapper>
+          }
+        />
+
+        <Route
+          path="/email-confirmed"
+          element={
+            <PageTransitionWrapper>
+              <EmailConfirmedPage />
+            </PageTransitionWrapper>
+          }
+        />
 
         {/* MARKETPLACE */}
         <Route
@@ -287,7 +362,11 @@ function AnimatedAppRoutes() {
         />
 
         {/* FALLBACK */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
+
       </Routes>
     </AnimatePresence>
   );
@@ -297,6 +376,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+
         {/* GLOBAL TOAST SYSTEM */}
         <Toaster
           position="top-right"
@@ -316,6 +396,7 @@ function App() {
               fontWeight: '500',
               boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
             },
+
             success: {
               duration: 3000,
               iconTheme: {
@@ -323,6 +404,7 @@ function App() {
                 secondary: '#0b0826',
               },
             },
+
             error: {
               duration: 4000,
               iconTheme: {
@@ -334,6 +416,7 @@ function App() {
         />
 
         <AnimatedAppRoutes />
+
       </Router>
     </AuthProvider>
   );

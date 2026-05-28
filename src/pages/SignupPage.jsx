@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
@@ -24,8 +24,14 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Dispatch programmatic email verification token signature straight to inbox
-      await sendEmailVerification(user);
+      // 2. Dispatch programmatic email verification token with custom redirect URL
+      await sendEmailVerification(user, {
+        url: 'https://kupora.vercel.app/email-confirmed',
+        handleCodeInApp: false
+      });
+      
+      // Sign out immediately so user must verify email before accessing dashboard
+      await signOut(auth);
       toast.success("Verification email sent! Please check your inbox.");
 
       // 3. Persist core metadata inside structural user documents matrix
@@ -47,8 +53,8 @@ export default function SignupPage() {
         });
       }
 
-      // 5. Navigate to the core workspace dashboard layout
-      navigate('/dashboard');
+      // 5. Navigate to login (user must verify email before logging in)
+      navigate('/login');
     } catch (err) {
       const sanitizedError = err.message.replace('Firebase: ', '');
       setError(sanitizedError);
@@ -103,7 +109,7 @@ export default function SignupPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase text-zinc-500 tracking-wider">Passphrase Allocation</label>
+            <label className="text-[11px] font-mono uppercase text-zinc-500 tracking-wider">Password</label>
             <input 
               type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters"
               className="w-full bg-white/[0.02] border border-white/10 focus:border-purple-500/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition-all placeholder-zinc-700"
@@ -119,7 +125,7 @@ export default function SignupPage() {
         </form>
 
         <p className="text-center text-xs text-zinc-500">
-          Already have an account? <Link to="/login" className="text-purple-400 hover:underline">Sign In Instead</Link>
+          Already configured identity? <Link to="/login" className="text-purple-400 hover:underline">Sign In Instead</Link>
         </p>
       </motion.div>
     </div>
