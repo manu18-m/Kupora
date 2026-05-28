@@ -126,7 +126,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-[#02010a] text-zinc-200 font-sans antialiased flex">
       
       {/* PERSISTENT ADMIN NAVIGATION BAR SIDEBAR (300px) */}
-      <aside className="w-[280px] border-r border-white/5 bg-[#04030f]/60 backdrop-blur-xl flex flex-col justify-between hidden md:flex shrink-0">
+      <aside className="w-[280px] border-r border-white/5 bg-[#04030f]/60 backdrop-blur-xl  flex-col justify-between hidden md:flex shrink-0">
         <div className="p-6 space-y-8">
           {/* Logo Frame Header */}
           <div className="flex items-center gap-2.5 font-bold text-sm text-white">
