@@ -57,7 +57,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase text-zinc-500 tracking-wider">Passphrase Key</label>
+            <label className="text-[11px] font-mono uppercase text-zinc-500 tracking-wider">Passphrase Key (Password)</label>
             <input 
               type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
               className="w-full bg-white/[0.02] border border-white/10 focus:border-purple-500/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition-all"
@@ -73,7 +73,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-xs text-zinc-500">
-          Unregistered user trace? <Link to="/signup" className="text-purple-400 hover:underline">Register New Node</Link>
+          Not Having An Account? <Link to="/signup" className="text-purple-400 hover:underline">Register New Account</Link>
         </p>
       </motion.div>
     </div>

@@ -2,19 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, ShieldCheck, Clock, Copy, Check, ArrowLeft, 
-  ThumbsUp, MessageSquare, AlertTriangle, ExternalLink, 
-  HelpCircle, Star, Share2, CornerDownRight, CreditCard, Lock
+  ThumbsUp, AlertTriangle, Share2, CornerDownRight, CreditCard, Lock
 } from 'lucide-react';
+
 import { useNavigate, useParams } from 'react-router-dom'; 
-import { doc, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore'; 
+
+import { 
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  increment,
+  updateDoc
+} from 'firebase/firestore'; 
+
 import { db, auth } from '../firebase'; 
+import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENT: TIMER PROPS ENGINE ---
 const CountdownEngine = ({ expiryDate }) => {
+
   const calculateDelta = () => {
-    if (!expiryDate || expiryDate.includes('Continuous')) return null;
+
+    if (!expiryDate || expiryDate.includes('Continuous')) {
+      return null;
+    }
+
     const delta = +new Date(expiryDate) - +new Date();
-    if (delta <= 0) return null;
+
+    if (delta <= 0) {
+      return null;
+    }
+
     return {
       d: Math.floor(delta / (1000 * 60 * 60 * 24)),
       h: Math.floor((delta / (1000 * 60 * 60)) % 24),
@@ -26,315 +45,355 @@ const CountdownEngine = ({ expiryDate }) => {
   const [timeLeft, setTimeLeft] = useState(calculateDelta());
 
   useEffect(() => {
-    const clock = setInterval(() => setTimeLeft(calculateDelta()), 1000);
+
+    const clock = setInterval(() => {
+      setTimeLeft(calculateDelta());
+    }, 1000);
+
     return () => clearInterval(clock);
+
   }, [expiryDate]);
 
-  if (!timeLeft) return <span className="text-red-400 font-mono">Continuous Monitoring / Active</span>;
+  if (!timeLeft) {
+    return (
+      <span className="text-emerald-400 font-mono">
+        Continuous Monitoring / Active
+      </span>
+    );
+  }
 
   return (
     <div className="flex gap-2 font-mono text-sm text-orange-400 font-bold">
       <Clock className="w-4 h-4 mt-0.5" />
-      <span>{timeLeft.d}d {timeLeft.h}h {timeLeft.m}m {timeLeft.s}s</span>
+
+      <span>
+        {timeLeft.d}d {timeLeft.h}h {timeLeft.m}m {timeLeft.s}s
+      </span>
     </div>
   );
 };
 
 export default function CouponDetailsPage() {
-  const navigate = useNavigate();
-  const { id } = useParams(); 
 
-  // --- DATA LOADING & FIRESTORE STATES ---
+  const navigate = useNavigate();
+  const { id } = useParams();
+
   const [coupon, setCoupon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const [copied, setCopied] = useState(false);
-  const [reported, setReported] = useState(false);
-  const [upvotes, setUpvotes] = useState(142);
-  const [voted, setVoted] = useState(false);
-
   const [isPurchased, setIsPurchased] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // --- DYNAMIC DATA FETCH ROUTINE LAYER ---
+  // NEW: PREVENT SPAM VOTING
+  const [hasVoted, setHasVoted] = useState(false);
+
+  // --- COMMUNITY VALIDATION ENGINE ---
+  const handleValidation = async (type) => {
+
+    if (!coupon) return;
+
+    // PREVENT MULTIPLE VOTES
+    if (hasVoted) {
+      toast.error('You already submitted validation.');
+      return;
+    }
+
+    const field =
+      type === 'worked'
+        ? 'workedCount'
+        : 'failedCount';
+
+    try {
+
+      await updateDoc(
+        doc(db, 'coupons', coupon.id),
+        {
+          [field]: increment(1)
+        }
+      );
+
+      // UPDATE LOCAL STATE
+      setCoupon(prev => ({
+        ...prev,
+        [field]: (prev[field] || 0) + 1
+      }));
+
+      // LOCK VOTING
+      setHasVoted(true);
+
+      toast.success(
+        type === 'worked'
+          ? 'Coupon marked as working.'
+          : 'Coupon reported as failed.'
+      );
+
+    } catch (err) {
+
+      toast.error('Validation sync failed.');
+
+    }
+  };
+
+  // --- FETCH COUPON ---
   useEffect(() => {
+
     const fetchSingleCoupon = async () => {
+
       setLoading(true);
-      setError(false);
+
       try {
-        const docRef = doc(db, 'coupons', id);
-        const docSnap = await getDoc(docRef);
+
+        const docSnap = await getDoc(
+          doc(db, 'coupons', id)
+        );
 
         if (docSnap.exists()) {
+
           const data = docSnap.data();
+
           setCoupon({
             id: docSnap.id,
-            brand: data.brand || 'Unknown Node',
-            code: data.code || 'UNASSIGNED',
-            discount: data.discount || 'Special Promotion Allocation',
-            category: data.category || 'SaaS Tools',
-            expiry: data.expiry || 'Continuous Monitoring',
-            price: data.price || '$0.00 Base',
-            sellerId: data.sellerId || null,
-            terms: data.terms ? data.terms.split('\n') : [
-              'Applies only to functional team and pro configurations.',
-              'Max utilization baseline capped at 12 rolling cycles per organization.',
-              'Zero compatibility stacking on top of parallel seed venture discount vouchers.'
-            ],
-            aiConfidence: data.aiConfidence || Math.floor(Math.random() * 5) + 95,
-            successRate: data.successRate || Math.floor(Math.random() * 4) + 96,
-            logo: data.logo || 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg',
+            ...data,
+
+            workedCount: data.workedCount || 0,
+            failedCount: data.failedCount || 0,
+
+            terms: data.terms
+              ? data.terms.split('\n')
+              : ['Applies to standard plans.'],
+
+            logo:
+              data.logo ||
+              'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg',
+
             seller: {
-              name: 'Node_Distributor_Alpha',
-              handle: '@devops_alpha',
+              name: 'Kupora Seller',
+              handle: '@seller',
               score: 98.6,
               totalSales: 1420,
-              rank: 'Tier 1 Prime Publisher'
-            },
-            reviews: [
-              { id: 1, user: 'indie_hacker_42', rating: 5, comment: 'Instant injection pipeline. Automated checking parameters matched perfectly. Saved on our backend migration build instantly.', time: '3 hours ago' },
-              { id: 2, user: 'procure_ops_node', rating: 5, comment: 'Synthetic verification payload data was true to scale. Solid cryptographic proof.', time: '2 days ago' }
-            ],
-            similars: [
-              { id: 'sim-1', brand: 'Supabase Pro', value: '$50 Credits', rate: 97 },
-              { id: 'sim-2', brand: 'Cursor Editor', value: '20% OFF Base', rate: 94 }
-            ]
+              rank: 'Trusted Seller'
+            }
           });
+
         } else {
+
           setError(true);
+
         }
+
       } catch (err) {
-        console.error("Firestore retrieval fault traces: ", err);
+
         setError(true);
+
       } finally {
+
         setLoading(false);
+
       }
     };
 
     if (id) {
       fetchSingleCoupon();
     }
+
   }, [id]);
 
-  // --- ADDITIONAL PERSISTENT CHECK: DUPLICATE PURCHASES ---
-  useEffect(() => {
-    const checkExistingPurchaseNode = async () => {
-      const currentUser = auth.currentUser;
-      if (!currentUser || !coupon) return;
-
-      try {
-        const q = query(
-          collection(db, 'purchases'),
-          where('buyerId', '==', currentUser.uid),
-          where('couponId', '==', coupon.id)
-        );
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          setIsPurchased(true); 
-        }
-      } catch (err) {
-        console.error("Ledger validation fault traces: ", err);
-      }
-    };
-
-    checkExistingPurchaseNode();
-  }, [coupon]);
-
-  // --- REAL FIRESTORE PRODUCTION PURCHASE TRANSACTION ---
+  // --- PURCHASE SIMULATION ---
   const handlePurchaseSimulation = async () => {
+
     const currentUser = auth.currentUser;
+
     if (!currentUser) {
-      alert("Authentication fault: Unassigned session key. Sign in to clear payment channels.");
+      toast.error('Authentication required.');
       return;
     }
 
     setIsProcessing(true);
+
     try {
-      const duplicateCheckQuery = query(
+
+      await addDoc(
         collection(db, 'purchases'),
-        where('buyerId', '==', currentUser.uid),
-        where('couponId', '==', coupon.id)
+        {
+          buyerId: currentUser.uid,
+          couponId: coupon.id,
+          amount: coupon.price,
+          purchasedAt: new Date().toISOString()
+        }
       );
-      const duplicateCheckSnap = await getDocs(duplicateCheckQuery);
-
-      if (!duplicateCheckSnap.empty) {
-        alert("Ecosystem validation error: Dynamic voucher contract asset already unlocked inside workspace.");
-        setIsPurchased(true);
-        setIsProcessing(false);
-        return;
-      }
-
-      await addDoc(collection(db, 'purchases'), {
-        buyerId: currentUser.uid,
-        couponId: coupon.id,
-        sellerId: coupon.sellerId || 'Node_Distributor_Alpha',
-        amount: coupon.price || '$0.00 Base',
-        purchasedAt: new Date().toISOString()
-      });
-
-      // Automated background notification dispatch
-      await addDoc(collection(db, 'notifications'), {
-        userId: coupon.sellerId || 'Node_Distributor_Alpha',
-        message: `Your coupon for ${coupon.brand} has been purchased successfully.`,
-        type: "sale",
-        read: false,
-        createdAt: new Date().toISOString()
-      });
 
       setIsPurchased(true);
 
+      toast.success('Coupon unlocked.');
+
     } catch (err) {
-      console.error("Settlement engine processing execution failure: ", err);
-      alert(err.message.replace('Firebase: ', ''));
+
+      toast.error('Transaction failed.');
+
     } finally {
+
       setIsProcessing(false);
+
     }
   };
 
-  const triggerCopy = () => {
-    if (!isPurchased || !coupon) return;
-    navigator.clipboard.writeText(coupon.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+  // LOADING STATE
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030014] text-zinc-400 font-mono text-xs flex items-center justify-center gap-3">
-        <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-        <span>Synchronizing Contract Buffer Segment Data...</span>
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center text-zinc-500 font-mono text-xs">
+        Loading coupon data...
       </div>
     );
   }
 
+  // ERROR STATE
   if (error || !coupon) {
     return (
-      <div className="min-h-screen bg-[#030014] text-zinc-400 font-mono text-xs flex flex-col items-center justify-center gap-4">
-        <div className="text-red-400 border border-red-900/30 bg-red-950/20 px-4 py-2 rounded-xl">
-          Error: Target allocation block hash trace mismatch or empty set.
-        </div>
-        <button onClick={() => navigate('/browse')} className="text-purple-400 hover:underline">
-          ← Return to Database Catalog
-        </button>
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center text-red-400 font-mono text-xs">
+        Coupon not found.
       </div>
     );
   }
+
+  // SUCCESS RATE
+  const totalValidations =
+    (coupon.workedCount || 0) +
+    (coupon.failedCount || 0);
+
+  const successRate =
+    totalValidations > 0
+      ? Math.round(
+          ((coupon.workedCount || 0) /
+            totalValidations) * 100
+        )
+      : 0;
 
   return (
     <div className="min-h-screen bg-[#030014] text-zinc-200 font-sans antialiased relative pb-24">
+
+      {/* BACKGROUND GLOW */}
       <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-bl from-purple-600/10 via-indigo-500/5 to-transparent blur-[150px] pointer-events-none" />
 
-      <div className="border-b border-white/5 bg-[#030014]/40 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
-          <button 
-            onClick={() => navigate('/browse')}
-            className="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition-colors font-medium group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" /> Return to Database Index
-          </button>
-          <div className="flex items-center gap-3">
-            <button className="p-2 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.04] text-zinc-400 hover:text-white transition-all">
-              <Share2 className="w-4 h-4" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 mt-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+
+        {/* LEFT COLUMN */}
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+
+          {/* MAIN CARD */}
+          <div className="glass-card border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+
+            <h1 className="text-2xl font-black text-white">
+              {coupon.brand}
+            </h1>
+
+            <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 my-4">
+              {coupon.discount}
+            </p>
+
+            <CountdownEngine expiryDate={coupon.expiry} />
+
+            <button
+              onClick={handlePurchaseSimulation}
+              disabled={isProcessing}
+              className="w-full mt-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 font-bold text-xs uppercase tracking-wider text-white"
+            >
+              {isPurchased
+                ? 'Coupon Unlocked'
+                : isProcessing
+                  ? 'Processing...'
+                  : 'Unlock Coupon'}
             </button>
           </div>
-        </div>
-      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 mt-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass-card border border-white/10 rounded-2xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-purple-500/15 via-transparent to-transparent blur-2xl pointer-events-none" />
-            <div className="flex justify-between items-start gap-4 mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                <img src={coupon.logo} alt={coupon.brand} className="w-10 h-10 object-contain" />
-              </div>
-              <div className="flex flex-col items-end gap-1.5 text-[10px] font-mono tracking-wider">
-                <span className="flex items-center gap-1 text-cyan-400 bg-cyan-950/40 border border-cyan-800/50 px-2.5 py-0.5 rounded-full uppercase">
-                  <Sparkles className="w-3 h-3 animate-pulse" /> AI CONFIDENCE: {coupon.aiConfidence}%
-                </span>
-                <span className="text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded-full uppercase">
-                  {coupon.successRate}% YIELD VERIFIED
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1 mb-6">
-              <span className="text-xs font-mono uppercase text-zinc-500 tracking-widest">{coupon.category}</span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">{coupon.brand}</h1>
-              <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-100 to-cyan-400 pt-1">
-                {coupon.discount}
-              </p>
-              <div className="text-xs text-zinc-400 flex items-center gap-1.5 pt-2">
-                Contract Rate: <span className="text-white font-semibold">{coupon.price}</span> 
-              </div>
-            </div>
-
-            <div className="bg-white/[0.01] border border-white/5 rounded-xl p-4 flex justify-between items-center">
-              <span className="text-xs text-zinc-500 font-medium">Validation Lease Expiry:</span>
-              <CountdownEngine expiryDate={coupon.expiry} />
-            </div>
-
-            <div className="mt-6 border border-white/5 rounded-xl overflow-hidden bg-black/20 p-1.5">
-              <AnimatePresence mode="wait">
-                {!isPurchased ? (
-                  <motion.div key="gate" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-3 p-2 text-center">
-                    <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-lg p-3">
-                      <div className="flex items-center gap-2 text-zinc-400 text-xs font-mono">
-                        <Lock className="w-3.5 h-3.5 text-purple-400" />
-                        <span>Code Signature:</span>
-                      </div>
-                      <span className="font-mono text-sm tracking-widest text-zinc-600 select-none blur-[3px]">••••••••••</span>
-                    </div>
-                    <button onClick={handlePurchaseSimulation} disabled={isProcessing} className="w-full py-3 rounded-lg text-xs font-mono font-bold tracking-wider uppercase transition-all bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)] disabled:opacity-50 flex items-center justify-center gap-2">
-                      {isProcessing ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Clearing Payment Channel...</span></> : <><CreditCard className="w-3.5 h-3.5" /><span>Unlock Target Allocation Asset</span></>}
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.div key="revealed" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between p-1 bg-black/40 rounded-lg group">
-                    <span className="font-mono text-sm tracking-wider font-bold text-purple-400 pl-4 select-all">{coupon.code}</span>
-                    <button onClick={triggerCopy} className={`px-5 py-2.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${copied ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 border' : 'bg-white text-black hover:bg-zinc-200'}`}>
-                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      <span>{copied ? 'Payload Saved' : 'Copy Code'}</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        </div>
-
-        <div className="lg:col-span-7 space-y-8">
+          {/* COMMUNITY TRUST */}
           <section className="glass-card border border-white/5 rounded-2xl p-6 space-y-4">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">Cryptographic Seller Node Profile</h3>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-              <div className="flex items-center gap-3">
-                <div onClick={() => navigate(`/seller/${coupon.seller.handle}`)} className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-mono font-bold text-sm cursor-pointer hover:border-purple-500/40 transition-colors">DA</div>
-                <div>
-                  <h4 onClick={() => navigate(`/seller/${coupon.seller.handle}`)} className="text-white font-bold text-sm flex items-center gap-1.5 cursor-pointer hover:text-purple-400 transition-colors">{coupon.seller.name} <ShieldCheck className="w-4 h-4 text-cyan-400" /></h4>
-                  <p className="text-xs text-zinc-500">{coupon.seller.rank}</p>
+
+            <div className="flex justify-between items-center">
+
+              <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">
+                Community Trust
+              </h3>
+
+              <span className="text-xs text-zinc-600 font-mono">
+                {totalValidations} Total Votes
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+
+              {/* SUCCESS RATE */}
+              <div>
+
+                <div className="text-3xl font-black text-white">
+                  {successRate}%
                 </div>
+
+                <p className="text-sm text-zinc-500">
+                  Success Rate
+                </p>
               </div>
-              <div className="text-left sm:text-right">
-                <p className="text-xs text-zinc-500">Node Trust Factor</p>
-                <p className="text-xl font-black text-white tracking-tight">{coupon.seller.score}% <span className="text-xs font-normal text-zinc-600">/ 100</span></p>
+
+              {/* BUTTONS */}
+              <div className="flex gap-2 flex-wrap">
+
+                <button
+                  disabled={hasVoted}
+                  onClick={() => handleValidation('worked')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    hasVoted
+                      ? 'bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed'
+                      : 'bg-emerald-950/20 border border-emerald-900/30 text-emerald-400 hover:bg-emerald-950/40'
+                  }`}
+                >
+                  <ThumbsUp className="w-4 h-4" />
+                  Worked
+                </button>
+
+                <button
+                  disabled={hasVoted}
+                  onClick={() => handleValidation('failed')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    hasVoted
+                      ? 'bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed'
+                      : 'bg-red-950/20 border border-red-900/30 text-red-400 hover:bg-red-950/40'
+                  }`}
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  Didn't Work
+                </button>
+
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-xs font-mono text-zinc-400 pt-1">
-              <div>Total Validated Yield Actions: <span className="text-white font-bold ml-1">{coupon.seller.totalSales} units</span></div>
-              <div className="text-right">Settlement Protocols: <span className="text-cyan-400 font-bold ml-1">USDC / Web3 API</span></div>
+
+            {/* VERIFIED TEXT */}
+            <div className="text-xs text-zinc-500 font-mono border-t border-white/5 pt-4">
+              Verified by Kupora community
             </div>
+
+          </section>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="lg:col-span-7 space-y-8">
+
+          {/* TERMS */}
+          <section className="glass-card border border-white/5 rounded-2xl p-6 space-y-3.5 text-xs text-zinc-400 leading-relaxed">
+
+            {coupon.terms.map((term, i) => (
+              <div
+                key={i}
+                className="flex gap-2.5 items-start"
+              >
+                <CornerDownRight className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+
+                <p>{term}</p>
+              </div>
+            ))}
+
           </section>
 
-          <section className="space-y-3">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">Execution Bounds & Terms</h3>
-            <div className="glass-card border border-white/5 rounded-2xl p-6 space-y-3.5 text-xs text-zinc-400 leading-relaxed">
-              {coupon.terms.map((term, i) => (
-                <div key={i} className="flex gap-2.5 items-start"><CornerDownRight className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" /><p>{term}</p></div>
-              ))}
-            </div>
-          </section>
         </div>
       </main>
     </div>
