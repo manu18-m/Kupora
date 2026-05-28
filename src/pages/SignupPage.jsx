@@ -88,7 +88,7 @@ export default function SignupPage() {
                   key={r} type="button" onClick={() => setRole(r)}
                   className={`py-2 rounded-xl text-xs font-mono font-bold uppercase border transition-all ${role === r ? 'bg-purple-600/20 border-purple-500 text-purple-400' : 'bg-white/[0.01] border-white/5 text-zinc-500 hover:text-white'}`}
                 >
-                  {r === 'user' ? 'Buyer' : 'Seller Node'}
+                  {r === 'user' ? 'Buyer' : 'Seller'}
                 </button>
               ))}
             </div>
