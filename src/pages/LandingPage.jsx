@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // ⚡ Added routing hook
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -6,7 +6,16 @@ import {
   ArrowRight, Cpu, Zap, Activity, Users, Globe, 
   ArrowLeft, Star, Plus, Minus,
 } from 'lucide-react';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs
+} from 'firebase/firestore';
 
+import { db } from '../firebase';
 
 // --- MOCK DATA CONTEXTS ---
 const BRAND_LOGOS = [
@@ -15,14 +24,6 @@ const BRAND_LOGOS = [
   { name: 'Supabase', logo: 'https://img.stackshare.io/service/11559/supabase.png' },
   { name: 'DigitalOcean', logo: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/digitalocean/digitalocean-original.svg' },
   { name: 'GitHub', logo: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg' },
-];
-
-const TRENDING_COUPONS = [
-  { id: 1, brand: 'Vercel Pro', value: '$100 Credits', desc: 'Valid on global edge computing frameworks & team pipeline servers.', code: 'VCRT100X', match: 99, category: 'DevOps' },
-  { id: 2, brand: 'Midjourney AI', value: '2 Months Free', desc: 'Unlock continuous ultra-fast GPU processing tiers instantly.', code: 'MIDJ2MO', match: 97, category: 'AI Tools' },
-  { id: 3, brand: 'Figma Dev', value: '30% OFF Annual', desc: 'For scaling UI UX design engineering teams and full workspaces.', code: 'FIG30ANN', match: 94, category: 'Design' },
-  { id: 4, brand: 'Linear App', value: '20% OFF Enterprise', desc: 'Optimize high-speed issue tracking, roadmaps, and cycle metrics.', code: 'LIN20CYCLE', match: 92, category: 'Productivity' },
-  { id: 5, brand: 'Cursor Editor', value: '1 Month Pro Trial', desc: 'Advanced contextual code generation pipeline integration.', code: 'CURSORPRO1', match: 98, category: 'Development' },
 ];
 
 const FAQS = [
@@ -35,7 +36,6 @@ const FAQS = [
 const BrandCard = ({ coupon }) => {
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
-
   const handleCopy = (e) => {
     e.stopPropagation();
 
@@ -103,9 +103,50 @@ const BrandCard = ({ coupon }) => {
 
 // --- CORE LANDING COMPONENT ---
 export default function LandingPage() {
-  const carouselRef = useRef(null);
-  const navigate = useNavigate(); // ⚡ Instantiated navigation engine
   const [activeFaq, setActiveFaq] = useState(null);
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const carouselRef = useRef(null); // ⚡ Instantiated navigation engine
+  const navigate = useNavigate();
+useEffect(() => {
+
+  const fetchTrendingCoupons = async () => {
+
+    try {
+
+      const q = query(
+        collection(db, 'coupons'),
+        where('status', '==', 'approved'),
+        orderBy('createdAt', 'desc'),
+        limit(4)
+      );
+
+      const snap = await getDocs(q);
+
+      setCoupons(
+        snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+      );
+
+    } catch (err) {
+
+      console.error(
+        'Error fetching coupons:',
+        err
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
+
+  fetchTrendingCoupons();
+
+}, []);
 
   const scrollCarousel = (direction) => {
     if (carouselRef.current) {
@@ -330,9 +371,57 @@ export default function LandingPage() {
             ref={carouselRef}
             className="flex gap-6 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
           >
-            {TRENDING_COUPONS.map((coupon) => (
-              <BrandCard key={coupon.id} coupon={coupon} />
-            ))}
+            {loading ? (
+
+  [1, 2, 3].map((i) => (
+    <div
+      key={i}
+      className="glass-card rounded-2xl p-6 min-w-[320px] h-[300px] animate-pulse bg-white/5"
+    />
+  ))
+
+) : coupons.length > 0 ? (
+
+  coupons.map((coupon) => (
+
+    <BrandCard
+      key={coupon.id}
+      coupon={{
+        ...coupon,
+
+        value: coupon.discount,
+
+        desc:
+          coupon.terms ||
+          'Standard enterprise allocation rules apply.',
+
+        match:
+          coupon.workedCount &&
+          coupon.failedCount
+            ? Math.round(
+                (
+                  coupon.workedCount /
+                  (
+                    coupon.workedCount +
+                    coupon.failedCount
+                  )
+                ) * 100
+              )
+            : 95
+      }}
+    />
+
+  ))
+
+) : (
+
+  <div className="glass-card rounded-2xl p-10 text-center min-w-full border border-white/5">
+    <p className="text-zinc-500 font-mono text-sm">
+      No live marketplace allocations available.
+    </p>
+  </div>
+
+)}
           </div>
         </div>
       </section>
