@@ -91,6 +91,12 @@ const DashboardLayout = ({ children }) => {
           <span>Kupora</span>
         </div>
        <div className="md:hidden flex items-center gap-2 text-[10px] font-mono font-bold shrink-0">
+        <button
+  onClick={() => navigate('/dashboard')}
+  className="text-zinc-300"
+>
+  Dashboard
+</button>
 
   <button
     onClick={() => navigate('/browse')}
