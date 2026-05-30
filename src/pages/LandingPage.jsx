@@ -19,13 +19,31 @@ import { db } from '../firebase';
 
 // --- MOCK DATA CONTEXTS ---
 const BRAND_LOGOS = [
-  { name: 'Vercel', logo: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg' },
-  { name: 'Figma', logo: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/figma/figma-original.svg' },
-  { name: 'Supabase', logo: 'https://img.stackshare.io/service/11559/supabase.png' },
-  { name: 'DigitalOcean', logo: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/digitalocean/digitalocean-original.svg' },
-  { name: 'GitHub', logo: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg' },
+  {
+    name: 'Amazon',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg'
+  },
+  {
+    name: 'Flipkart',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Flipkart_logo.png'
+  },
+  {
+    name: 'Netflix',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Netflix_icon.svg'
+  },
+  {
+    name: 'Hostinger',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Hostinger_logo_black.svg'
+  },
+  {
+    name: 'Swiggy',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/13/Swiggy_logo.png'
+  },
+  {
+    name: 'Zomato',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Zomato_logo.png'
+  }
 ];
-
 const FAQS = [
   { q: "How does the AI verify these coupon codes?", a: "Our AI engine runs real-time browser automation scripts alongside crowd-sourced programmatic checking hooks. It updates success probability indexes continuously to eliminate dead clicks." },
   { q: "Can merchants inject custom target rules?", a: "Yes. Using our Developer Dashboard, merchants can seamlessly deploy customized programmatic discount wrappers tied to active API routes." },
@@ -307,12 +325,12 @@ useEffect(() => {
       {/* FEATURED BRANDS (MARQUEE RIBBON EFFECT) */}
       <section className="py-8 border-y border-white/5 bg-white/[0.01] overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 text-xs font-mono tracking-widest text-zinc-500 uppercase text-center mb-6">
-          Natively Interfacing Premium Digital Platforms
+          Top Brands Available On Kupora
         </div>
-        <div className="hidden md:flex gap-12 justify-center items-center opacity-40 grayscale contrast-200">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-6 justify-center items-center opacity-70">
           {BRAND_LOGOS.map((brand, i) => (
             <div key={i} className="flex items-center justify-center gap-2">
-              <img src={brand.logo} alt={brand.name} className="w-6 h-6 object-contain" />
+              <img src={brand.logo} alt={brand.name} className="w-8 h-8 object-contain" />
               <span className="font-bold text-white text-sm">{brand.name}</span>
             </div>
           ))}
