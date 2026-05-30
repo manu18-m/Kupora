@@ -309,9 +309,9 @@ useEffect(() => {
         <div className="max-w-7xl mx-auto px-4 text-xs font-mono tracking-widest text-zinc-500 uppercase text-center mb-6">
           Natively Interfacing Premium Digital Platforms
         </div>
-        <div className="flex gap-6 overflow-x-auto px-4 justify-start opacity-40 grayscale contrast-200">
+        <div className="hidden md:flex gap-12 justify-center items-center opacity-40 grayscale contrast-200">
           {BRAND_LOGOS.map((brand, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center justify-center gap-2">
               <img src={brand.logo} alt={brand.name} className="w-6 h-6 object-contain" />
               <span className="font-bold text-white text-sm">{brand.name}</span>
             </div>
