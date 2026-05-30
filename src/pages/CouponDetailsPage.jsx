@@ -85,7 +85,6 @@ export default function CouponDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const [copied, setCopied] = useState(false);
   const [isPurchased, setIsPurchased] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -179,6 +178,17 @@ export default function CouponDetailsPage() {
         if (docSnap.exists()) {
 
           const data = docSnap.data();
+          let sellerData = null;
+
+if (data.sellerId) {
+  const sellerDoc = await getDoc(
+    doc(db, 'users', data.sellerId)
+  );
+
+  if (sellerDoc.exists()) {
+    sellerData = sellerDoc.data();
+  }
+}
 
           setCoupon({
             id: docSnap.id,
@@ -196,12 +206,13 @@ export default function CouponDetailsPage() {
               'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg',
 
             seller: {
-              name: 'Kupora Seller',
-              handle: '@seller',
-              score: 98.6,
-              totalSales: 1420,
-              rank: 'Trusted Seller'
-            }
+               name: sellerData?.handle || 'Unknown Seller',
+                handle: sellerData?.handle || '@unknown',
+               upiId: sellerData?.upiId || '',
+               score: 98.6,
+               totalSales: sellerData?.totalSales || 0,
+             rank: 'Trusted Seller'
+          }
           });
           await checkPurchaseStatus(docSnap.id);
 
@@ -229,48 +240,54 @@ export default function CouponDetailsPage() {
   }, [id]);
 
   // --- PURCHASE SIMULATION ---
-  const handlePurchaseSimulation = async () => {
-    if (isPurchased) {
+ const handlePurchaseSimulation = async () => {
+
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    toast.error('Authentication required.');
+    return;
+  }
+
+  if (isPurchased) {
     toast.error('Coupon already purchased');
     return;
   }
 
-    const currentUser = auth.currentUser;
+  if (coupon?.sellerId === currentUser.uid) {
+    toast.error("You can't buy your own coupon");
+    return;
+  }
 
-    if (!currentUser) {
-      toast.error('Authentication required.');
-      return;
-    }
+  setIsProcessing(true);
 
-    setIsProcessing(true);
+  try {
 
-    try {
+    await addDoc(
+      collection(db, 'purchases'),
+      {
+        buyerId: currentUser.uid,
+        sellerId: coupon.sellerId,
+        couponId: coupon.id,
+        amount: coupon.price,
+        purchasedAt: new Date().toISOString()
+      }
+    );
 
-      await addDoc(
-        collection(db, 'purchases'),
-        {
-          buyerId: currentUser.uid,
-          couponId: coupon.id,
-          amount: coupon.price,
-          purchasedAt: new Date().toISOString()
-        }
-      );
+    setIsPurchased(true);
 
-      setIsPurchased(true);
+    toast.success('Coupon unlocked.');
 
-      toast.success('Coupon unlocked.');
+  } catch (err) {
 
-    } catch (err) {
+    toast.error('Transaction failed.');
 
-      toast.error('Transaction failed.');
+  } finally {
 
-    } finally {
+    setIsProcessing(false);
 
-      setIsProcessing(false);
-
-    }
-  };
-
+  }
+};
 
   // LOADING STATE
   if (loading) {
@@ -324,6 +341,12 @@ export default function CouponDetailsPage() {
             <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 my-4">
               {coupon.discount}
             </p>
+            <p className="text-zinc-400 text-sm">
+              Price: ₹{coupon.price}
+            </p>
+            <p className="text-zinc-500 text-xs mt-1">
+  Seller: {coupon.seller?.handle}
+</p>
 
             <CountdownEngine expiryDate={coupon.expiry} />
             {isPurchased ? (
@@ -383,7 +406,7 @@ export default function CouponDetailsPage() {
   >
     {isProcessing
       ? 'Processing...'
-      : 'Unlock Coupon'}
+      :  `Buy Coupon - ₹${coupon.price}`}
   </button>
 )}
           </div>
