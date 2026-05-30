@@ -13,6 +13,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 // --- DEMO FILTERS SCHEMA ---
 const CATEGORIES = [
+  'All Deals',
   'Electronics',
   'Shopping',
   'Fashion',
@@ -94,7 +95,7 @@ const CouponCard = ({ coupon }) => {
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -6, boxShadow: '0 20px 40px -15px rgba(124, 58, 237, 0.15)' }}
       onClick={() => navigate(`/coupon/${coupon.id}`)} 
-      className="glass-card glass-card-hover rounded-2xl p-6 flex flex-col justify-between min-h-[300px] relative overflow-hidden group cursor-pointer"
+     className="glass-card glass-card-hover rounded-2xl p-6 flex flex-col justify-between min-h-[260px] relative overflow-hidden group cursor-pointer"
     >
       <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-purple-500/10 to-transparent blur-2xl pointer-events-none group-hover:from-purple-500/20 transition-all duration-300" />
       
@@ -135,7 +136,7 @@ const CouponCard = ({ coupon }) => {
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 text-xs font-mono font-medium border-t border-white/5 pt-4 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs font-mono font-medium border-t border-white/5 pt-4 mb-5">
           {coupon.trustScore >= 95 ? (
             <div className="flex items-center gap-1 text-cyan-400 bg-cyan-950/40 border border-cyan-800/50 px-2.5 py-1 rounded-full">
               <Sparkles className="w-3.5 h-3.5" /> AI Verified
@@ -151,7 +152,7 @@ const CouponCard = ({ coupon }) => {
         </div>
       </div>
 
-      <div className="flex items-end justify-between gap-4 mt-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-auto">
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-1.5 text-xs text-zinc-400">
             <svg className="w-3.5 h-3.5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
@@ -329,10 +330,12 @@ export default function MarketplacePage() {
 
         {/* MAIN CONTENT AREA: SIDEBAR + GRID */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10 grid grid-cols-1 md:grid-cols-[280px_1fr] gap-10">
-          <FilterSidebar filters={DEMO_FILTERS} loading={loading} />
+          <div className="hidden md:block">
+  <FilterSidebar filters={DEMO_FILTERS} loading={loading} />
+</div>
 
           <div className="space-y-8">
-            <div className="flex items-center justify-between gap-4 glass-card rounded-2xl p-4 border border-white/5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-card rounded-2xl p-4 border border-white/5">
               <p className="text-sm text-zinc-400">
                 {loading ? (
                   <Skeleton width={180} height={16} />
@@ -340,9 +343,9 @@ export default function MarketplacePage() {
                   <>Showing <span className="font-semibold text-white font-mono">{filteredCoupons.length}</span> verified coupons</>
                 )}
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
                 <button className="text-xs text-zinc-500 font-medium flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 hover:text-white hover:border-white/10">
-                  Sorted By: Trust Score <ChevronDown className="w-4 h-4" />
+                  Sort Trust Score <ChevronDown className="w-4 h-4" />
                 </button>
                 <div className="flex items-center gap-3 text-zinc-600 border-l border-white/5 pl-3">
                   <Grid3X3 className="w-5 h-5 text-purple-400" />
@@ -360,7 +363,7 @@ export default function MarketplacePage() {
 
             {/* Dynamic Loading Shimmer Grid Infrastructure */}
             {loading ? (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-12">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
                 {[1, 2, 3, 4].map(shimmerId => (
                   <div key={shimmerId} className="glass-card rounded-2xl p-6 min-h-[300px] border border-white/5 flex flex-col justify-between">
                     <div>
@@ -396,7 +399,7 @@ export default function MarketplacePage() {
                 ))}
               </div>
             ) : (
-              <motion.div layout className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-12">
+              <motion.div layout className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
                 <AnimatePresence mode="popLayout">
                   {filteredCoupons.map(coupon => (
                     <CouponCard key={coupon.id} coupon={coupon} />
