@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc } from 'firebase/firestore'; 
+import { collection, addDoc, doc, getDoc} from 'firebase/firestore'; 
 import { db, auth } from '../firebase'; 
 import toast from 'react-hot-toast';
 
@@ -42,6 +42,23 @@ export default function UploadCouponPage() {
     e.preventDefault();
     const currentUser = auth.currentUser;
     if (!currentUser) { toast.error('Authentication fault.'); return; }
+    const profileSnap = await getDoc(
+  doc(db, 'profiles', currentUser.uid)
+);
+
+if (!profileSnap.exists()) {
+  toast.error('Complete your seller profile first.');
+  navigate('/dashboard');
+  return;
+}
+
+const profileData = profileSnap.data();
+
+if (!profileData.upiId) {
+  toast.error('Add your UPI ID before uploading coupons.');
+  navigate('/dashboard');
+  return;
+}
     
     // Validate all required fields
     if (!brand.trim() || !code.trim() || !discount.trim() || !price.trim()) { 
