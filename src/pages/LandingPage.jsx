@@ -14,6 +14,12 @@ import {
   limit,
   getDocs
 } from 'firebase/firestore';
+import amazonLogo from '../assets/logos/amazon.png';
+import flipkartLogo from '../assets/logos/flipkart.png';
+import hostingerLogo from '../assets/logos/hostinger.png';
+import netflixLogo from '../assets/logos/netflix.png';
+import swiggyLogo from '../assets/logos/swiggy.png';
+import zomatoLogo from '../assets/logos/zomato.png';
 
 import { db } from '../firebase';
 
@@ -21,27 +27,27 @@ import { db } from '../firebase';
 const BRAND_LOGOS = [
   {
     name: 'Amazon',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg'
+    logo: amazonLogo
   },
   {
     name: 'Flipkart',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Flipkart_logo.png'
+    logo: flipkartLogo
   },
   {
     name: 'Netflix',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Netflix_icon.svg'
+    logo: netflixLogo
   },
   {
     name: 'Hostinger',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Hostinger_logo_black.svg'
+    logo: hostingerLogo
   },
   {
     name: 'Swiggy',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/13/Swiggy_logo.png'
+    logo: swiggyLogo
   },
   {
     name: 'Zomato',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Zomato_logo.png'
+    logo: zomatoLogo
   }
 ];
 const FAQS = [
@@ -325,12 +331,12 @@ useEffect(() => {
       {/* FEATURED BRANDS (MARQUEE RIBBON EFFECT) */}
       <section className="py-8 border-y border-white/5 bg-white/[0.01] overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 text-xs font-mono tracking-widest text-zinc-500 uppercase text-center mb-6">
-          Top Brands Available On Kupora
+          Popular Coupon Brands
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-6 justify-center items-center opacity-70">
           {BRAND_LOGOS.map((brand, i) => (
             <div key={i} className="flex items-center justify-center gap-2">
-              <img src={brand.logo} alt={brand.name} className="w-8 h-8 object-contain" />
+              <img src={brand.logo} alt={brand.name} className="w-10 h-10 object-contain" />
               <span className="font-bold text-white text-sm">{brand.name}</span>
             </div>
           ))}
