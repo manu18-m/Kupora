@@ -177,8 +177,14 @@ useEffect(() => {
             </div>
             <span>Kup<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">ora</span></span>
           </div>
+        <button
+  onClick={() => navigate('/browse')}
+  className="md:hidden shrink-0 px-3 py-2 text-xs font-medium text-white bg-purple-600 rounded-lg"
+>
+  Launch App
+</button> 
 
-          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-medium text-zinc-400 overflow-x-auto no-scrollbar">
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400">
 
   <button
     onClick={() =>
@@ -226,7 +232,7 @@ useEffect(() => {
 
 </div>
 
-         <div className="flex items-center gap-4">
+         <div className="hidden md:flex items-center gap-4">
 
  <button
   onClick={() => navigate('/login')}
@@ -283,15 +289,14 @@ useEffect(() => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-10 max-w-2xl mx-auto"
         >
-          <div className="relative group p-1.5 bg-white/5 border border-white/10 rounded-2xl flex items-center shadow-2xl focus-within:border-purple-500/50 transition-all duration-300">
-            <input 
-              type="text" 
+         <div className="relative group p-1.5 bg-white/5 border border-white/10 rounded-2xl flex flex-col sm:flex-row gap-2 shadow-2xl focus-within:border-purple-500/50 transition-all duration-300">
+              <input type="text" 
               placeholder="Paste a merchant URL or ask 'Best cloud infrastructure discounts'..." 
               className="w-full bg-transparent border-none text-white text-sm placeholder-zinc-500 pl-4 focus:outline-none"
             />
             <button 
               onClick={() => navigate('/browse')} // ⚡ Renders browsing portal on click
-              className="bg-white text-black px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-zinc-200 transition-all shrink-0 flex items-center gap-1.5"
+              className="w-full sm:w-auto bg-white text-black px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-zinc-200 transition-all shrink-0 flex items-center gap-1.5"
             >
               <span>Scan Market</span> <ArrowRight className="w-4 h-4" />
             </button>
@@ -304,7 +309,7 @@ useEffect(() => {
         <div className="max-w-7xl mx-auto px-4 text-xs font-mono tracking-widest text-zinc-500 uppercase text-center mb-6">
           Natively Interfacing Premium Digital Platforms
         </div>
-        <div className="flex gap-12 justify-center items-center opacity-40 grayscale contrast-200">
+        <div className="flex gap-6 overflow-x-auto px-4 justify-start opacity-40 grayscale contrast-200">
           {BRAND_LOGOS.map((brand, i) => (
             <div key={i} className="flex items-center gap-2">
               <img src={brand.logo} alt={brand.name} className="w-6 h-6 object-contain" />
@@ -376,7 +381,7 @@ useEffect(() => {
   [1, 2, 3].map((i) => (
     <div
       key={i}
-      className="glass-card rounded-2xl p-6 min-w-[320px] h-[300px] animate-pulse bg-white/5"
+      className="glass-card rounded-2xl p-6 min-w-[280px] sm:min-w-[320px] h-[300px] animate-pulse bg-white/5"
     />
   ))
 
