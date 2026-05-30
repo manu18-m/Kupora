@@ -80,7 +80,7 @@ const DashboardLayout = ({ children }) => {
     <div className="min-h-screen bg-[#030014] text-zinc-100 flex flex-col relative">
 
       {/* HEADER */}
-      <header className="h-16 border-b border-white/5 bg-[#030014]/60 backdrop-blur-xl sticky top-0 z-50 px-6 flex items-center justify-between">
+      <header className="h-16 border-b border-white/5 bg-[#030014]/60 backdrop-blur-xl sticky top-0 z-50 px-3 sm:px-6 flex items-center justify-between">
 
         {/* LOGO */}
         <div
@@ -90,9 +90,45 @@ const DashboardLayout = ({ children }) => {
           <div className="w-6 h-6 rounded bg-gradient-to-tr from-purple-600 to-cyan-400" />
           <span>Kupora</span>
         </div>
+       <div className="md:hidden flex items-center gap-2 text-[10px] font-mono font-bold shrink-0">
+
+  <button
+    onClick={() => navigate('/browse')}
+    className="text-purple-400"
+  >
+    Market
+  </button>
+
+  <button
+    onClick={() => navigate('/upload')}
+    className="text-cyan-400"
+  >
+    Upload
+  </button>
+
+  {user ? (
+    <button
+      onClick={() => {
+        logout();
+        navigate('/');
+      }}
+      className="text-red-400"
+    >
+      Exit
+    </button>
+  ) : (
+    <button
+      onClick={() => navigate('/login')}
+      className="text-cyan-400"
+    >
+      Login
+    </button>
+  )}
+
+</div>
 
         {/* NAVIGATION */}
-        <nav className="flex items-center gap-6 text-xs font-mono font-bold uppercase tracking-wider">
+        <nav className="hidden md:flex items-center gap-6 text-xs font-mono font-bold uppercase tracking-wider">
 
           <button
             onClick={() => navigate('/browse')}
