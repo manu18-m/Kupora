@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, doc, deleteDoc, updateDoc, getDoc, addDoc, onSnapshot } from 'firebase/firestore'; 
 import { db, auth } from '../firebase'; 
+import { setDoc } from 'firebase/firestore';
 import { 
   LayoutDashboard, Wallet, ShieldCheck, Bell, BarChart3, 
   Flame, Zap, PlusCircle, Search, Menu, X, Check, Copy, 
@@ -65,7 +66,14 @@ export default function Dashboard() {
   
   // Profile Management Local States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [profile, setProfile] = useState({ displayName: '', bio: '', twitter: '', website: '' });
+  const [profile, setProfile] = useState({
+  displayName: '',
+  bio: '',
+  twitter: '',
+  website: '',
+  upiId: '',
+  phone: ''
+});
   const [updateLoading, setUpdateLoading] = useState(false);
 
   // Inline Edit Local Form States
@@ -146,7 +154,11 @@ export default function Dashboard() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault(); setUpdateLoading(true);
     try {
-      await updateDoc(doc(db, 'profiles', auth.currentUser.uid), profile);
+      await setDoc(
+  doc(db, 'profiles', auth.currentUser.uid),
+  profile,
+  { merge: true }
+);
       setIsEditingProfile(false);
     } catch(err) { alert("Sync failed."); } finally { setUpdateLoading(false); }
   };
@@ -281,15 +293,52 @@ export default function Dashboard() {
                   <form onSubmit={handleUpdateProfile} className="space-y-3">
                     <input value={profile.displayName} onChange={e => setProfile({...profile, displayName: e.target.value})} className="w-full bg-black/40 border border-white/10 p-2 rounded text-sm text-white focus:outline-none" placeholder="Display Name" />
                     <textarea value={profile.bio} onChange={e => setProfile({...profile, bio: e.target.value})} className="w-full bg-black/40 border border-white/10 p-2 rounded text-sm text-white focus:outline-none" placeholder="Bio Description" />
+                   
+                    <input
+  value={profile.phone || ''}
+  onChange={e =>
+    setProfile({
+      ...profile,
+      phone: e.target.value
+    })
+  }
+  className="w-full bg-black/40 border border-white/10 p-2 rounded text-sm text-white focus:outline-none"
+  placeholder="Phone Number"
+/>
+
+<input
+  value={profile.upiId || ''}
+  onChange={e =>
+    setProfile({
+      ...profile,
+      upiId: e.target.value
+    })
+  }
+  className="w-full bg-black/40 border border-white/10 p-2 rounded text-sm text-white focus:outline-none"
+  placeholder="UPI ID (manu@paytm)"
+/>
                     <button type="submit" disabled={updateLoading} className="bg-white text-black px-4 py-2 rounded text-xs font-bold font-mono transition-opacity disabled:opacity-50">{updateLoading ? 'Saving...' : 'Save Changes'}</button>
                   </form>
                 ) : (
-                  <div className="space-y-1 text-xs text-zinc-400">
-                    <p className="text-white font-bold">{profile.displayName || 'Set Profile Name Signature'}</p>
-                    <p className="leading-relaxed">{profile.bio || 'No workspace operational biography defined.'}</p>
-                  </div>
+                 <div className="space-y-1 text-xs text-zinc-400">
+  <p className="text-white font-bold">
+    {profile.displayName || 'Set Profile Name Signature'}
+  </p>
+
+  <p className="leading-relaxed">
+    {profile.bio || 'No workspace operational biography defined.'}
+  </p>
+
+  <p className="text-zinc-500">
+    Phone: {profile.phone || 'Not Set'}
+  </p>
+
+  <p className="text-zinc-500">
+    UPI: {profile.upiId ? 'Configured ✅' : 'Not Set'}
+  </p>
+</div>
                 )}
-              </div>
+                </div>
 
               {/* OWNED MODULE PARAMS STORAGE MODULE TRAY */}
               <div className="border border-white/5 rounded-2xl p-6 space-y-4 bg-white/[0.01]">

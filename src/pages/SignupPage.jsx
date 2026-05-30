@@ -36,12 +36,17 @@ export default function SignupPage() {
 
       // 3. Persist core metadata inside structural user documents matrix
       await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        role: role,
-        handle: `@${email.split('@')[0]}`,
-        createdAt: new Date().toISOString()
-      });
+  uid: user.uid,
+  email: user.email,
+  role: role,
+  handle: `@${email.split('@')[0]}`,
+
+  totalSales: 0,
+  totalPurchases: 0,
+  earnings: 0,
+
+  createdAt: new Date().toISOString()
+});
 
       // 4. Provision skeleton state arrays inside profiles if registering as a seller
       if (role === 'seller') {
