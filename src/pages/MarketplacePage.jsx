@@ -12,8 +12,12 @@ import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
 // --- DEMO FILTERS SCHEMA ---
-const DEMO_CATEGORIES = [
-  'All Deals', 'SaaS Tools', 'Infrastructure', 'Design Resources', 'AI & ML', 'Marketing Plugins', 'Cloud Hosting'
+const CATEGORIES = [
+  'Electronics',
+  'Shopping',
+  'Fashion',
+  'Food',
+  'Travel'
 ];
 
 const DEMO_FILTERS = {
@@ -232,7 +236,7 @@ export default function MarketplacePage() {
             brand: data.brand || 'Unknown Node',
             code: data.code || 'UNASSIGNED',
             discount: data.discount || 'Special Promotion Allocation',
-            category: data.category || 'SaaS Tools',
+            category: data.category || 'Shopping',
             expiry: data.expiry || 'Continuous Monitoring',
             price: data.price || '$0.00 Base',
             trustScore: data.trustScore || Math.floor(Math.random() * 8) + 92,
@@ -299,7 +303,7 @@ export default function MarketplacePage() {
                   type="text" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search infrastructure or SaaS codes..." 
+                  placeholder="Search Amazon, Myntra, Swiggy deals..." 
                   className="w-full bg-white/[0.02] border border-white/10 focus:border-purple-500/50 rounded-2xl pl-12 pr-10 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all placeholder-zinc-600"
                 />
                 {searchQuery && (
@@ -310,7 +314,7 @@ export default function MarketplacePage() {
 
             {/* CATEGORY TABS CONTAINER */}
             <div className="relative overflow-x-auto no-scrollbar pb-2 flex gap-1.5 font-medium text-sm border-b border-white/5">
-              {DEMO_CATEGORIES.map(category => (
+              {CATEGORIES.map(category => (
                 <button 
                   key={category}
                   onClick={() => setActiveCategory(category)}

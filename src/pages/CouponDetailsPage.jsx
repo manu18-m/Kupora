@@ -7,14 +7,17 @@ import {
 
 import { useNavigate, useParams } from 'react-router-dom'; 
 
-import { 
+import {
   doc,
   getDoc,
   collection,
   addDoc,
   increment,
-  updateDoc
-} from 'firebase/firestore'; 
+  updateDoc,
+  query,
+  where,
+  getDocs
+} from 'firebase/firestore';
 
 import { db, auth } from '../firebase'; 
 import toast from 'react-hot-toast';
@@ -88,6 +91,30 @@ export default function CouponDetailsPage() {
 
   // NEW: PREVENT SPAM VOTING
   const [hasVoted, setHasVoted] = useState(false);
+  const checkPurchaseStatus = async (couponId) => {
+
+  const currentUser = auth.currentUser;
+
+  if (!currentUser || !couponId) return;
+
+  try {
+
+    const purchaseQuery = query(
+      collection(db, 'purchases'),
+      where('buyerId', '==', currentUser.uid),
+      where('couponId', '==', couponId)
+    );
+
+    const snapshot = await getDocs(purchaseQuery);
+
+    if (!snapshot.empty) {
+      setIsPurchased(true);
+    }
+
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   // --- COMMUNITY VALIDATION ENGINE ---
   const handleValidation = async (type) => {
@@ -176,6 +203,7 @@ export default function CouponDetailsPage() {
               rank: 'Trusted Seller'
             }
           });
+          await checkPurchaseStatus(docSnap.id);
 
         } else {
 
@@ -202,6 +230,10 @@ export default function CouponDetailsPage() {
 
   // --- PURCHASE SIMULATION ---
   const handlePurchaseSimulation = async () => {
+    if (isPurchased) {
+    toast.error('Coupon already purchased');
+    return;
+  }
 
     const currentUser = auth.currentUser;
 
@@ -238,6 +270,7 @@ export default function CouponDetailsPage() {
 
     }
   };
+
 
   // LOADING STATE
   if (loading) {
@@ -293,18 +326,66 @@ export default function CouponDetailsPage() {
             </p>
 
             <CountdownEngine expiryDate={coupon.expiry} />
+            {isPurchased ? (
 
-            <button
-              onClick={handlePurchaseSimulation}
-              disabled={isProcessing}
-              className="w-full mt-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 font-bold text-xs uppercase tracking-wider text-white"
-            >
-              {isPurchased
-                ? 'Coupon Unlocked'
-                : isProcessing
-                  ? 'Processing...'
-                  : 'Unlock Coupon'}
-            </button>
+  <div className="mt-6 bg-emerald-950/20 border border-emerald-900/30 rounded-xl p-4">
+
+    <p className="text-xs text-emerald-400 mb-2">
+      Coupon Code
+    </p>
+
+    <div className="flex items-center justify-between">
+
+      <span className="font-mono text-lg font-bold text-emerald-400">
+        {coupon.code}
+      </span>
+
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(coupon.code);
+          toast.success('Coupon copied');
+        }}
+      >
+        <Copy className="w-5 h-5 text-emerald-400" />
+      </button>
+
+    </div>
+
+  </div>
+
+) : (
+
+  <div className="mt-6 bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
+
+    <Lock className="w-5 h-5 text-zinc-500" />
+
+    <div>
+
+      <p className="text-white text-sm font-medium">
+        Coupon Locked
+      </p>
+
+      <p className="text-zinc-500 text-xs">
+        Purchase to reveal coupon code
+      </p>
+
+    </div>
+
+  </div>
+
+)}
+
+        {!isPurchased && (
+  <button
+    onClick={handlePurchaseSimulation}
+    disabled={isProcessing}
+    className="w-full mt-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 font-bold text-xs uppercase tracking-wider text-white"
+  >
+    {isProcessing
+      ? 'Processing...'
+      : 'Unlock Coupon'}
+  </button>
+)}
           </div>
 
           {/* COMMUNITY TRUST */}

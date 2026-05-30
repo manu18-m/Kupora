@@ -11,7 +11,13 @@ const SparklesIcon = ({ className = "w-4 h-4" }) => <svg className={className} v
 const ArrowRightIcon = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>;
 const LayoutIcon = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>;
 
-const CATEGORIES = ['SaaS Tools', 'Infrastructure', 'Design Resources', 'AI & ML', 'Cloud Hosting'];
+const CATEGORIES = [
+  'Electronics',
+  'Shopping',
+  'Fashion',
+  'Food',
+  'Travel'
+];
 
 export default function UploadCouponPage() {
   const navigate = useNavigate();
@@ -19,7 +25,7 @@ export default function UploadCouponPage() {
   const [brand, setBrand] = useState('');
   const [discount, setDiscount] = useState('');
   const [code, setCode] = useState('');
-  const [category, setCategory] = useState('SaaS Tools');
+  const [category, setCategory] = useState('Shopping');
   const [expiry, setExpiry] = useState('');
   const [price, setPrice] = useState('');
   const [terms, setTerms] = useState('');
