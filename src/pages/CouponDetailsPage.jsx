@@ -238,6 +238,108 @@ if (data.sellerId) {
     }
 
   }, [id]);
+  const handleRazorpayPayment = async () => {
+  try {
+
+    const response = await fetch(
+      "http://localhost:5000/api/create-order",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: coupon.price,
+        }),
+      }
+    );
+
+    const order = await response.json();
+
+    const options = {
+      key: "rzp_test_SvgG0RskV05T0a",
+      amount: order.amount,
+      currency: order.currency,
+      name: "Kupora",
+      description: "Coupon Purchase",
+      order_id: order.id,
+
+      handler: async function (response) {
+
+  try {
+
+    const currentUser = auth.currentUser;
+
+    await addDoc(
+      collection(db, "purchases"),
+      {
+        buyerId: currentUser.uid,
+        sellerId: coupon.sellerId,
+        couponId: coupon.id,
+        amount: coupon.price,
+
+        razorpayPaymentId:
+          response.razorpay_payment_id,
+
+        razorpayOrderId:
+          response.razorpay_order_id,
+
+        purchasedAt:
+          new Date().toISOString(),
+      }
+    );
+
+    setIsPurchased(true);
+
+    toast.success(
+      "Coupon Unlocked Successfully!"
+    );
+
+  } catch (err) {
+
+    console.error(err);
+
+    toast.error(
+      "Purchase saved failed"
+    );
+
+  }
+
+},
+ prefill: {
+    contact: "9876543210",
+    email: "test@kupora.in"
+  },
+
+  // 👇 ADD HERE
+  method: {
+    upi: true,
+    card: true,
+    netbanking: true,
+    wallet: true
+  },
+
+      theme: {
+        color: "#7C3AED",
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.on("payment.failed", function (response) {
+  console.log("PAYMENT FAILED:", response);
+  toast.error("Payment Failed");
+});
+
+    rzp.open();
+
+  } catch (err) {
+
+    console.error(err);
+
+    toast.error("Payment failed");
+
+  }
+};
 
   // --- PURCHASE SIMULATION ---
  const handlePurchaseSimulation = async () => {
@@ -333,6 +435,7 @@ if (data.sellerId) {
 
           {/* MAIN CARD */}
           <div className="glass-card border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+          
 
             <h1 className="text-2xl font-black text-white">
               {coupon.brand}
@@ -399,8 +502,9 @@ if (data.sellerId) {
 )}
 
         {!isPurchased && (
+           <div className="space-y-3 mt-6">
   <button
-    onClick={handlePurchaseSimulation}
+    onClick={handleRazorpayPayment}
     disabled={isProcessing}
     className="w-full mt-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 font-bold text-xs uppercase tracking-wider text-white"
   >
@@ -408,9 +512,9 @@ if (data.sellerId) {
       ? 'Processing...'
       :  `Buy Coupon - ₹${coupon.price}`}
   </button>
-)}
           </div>
-
+        )}
+          </div>
           {/* COMMUNITY TRUST */}
           <section className="glass-card border border-white/5 rounded-2xl p-6 space-y-4">
 
